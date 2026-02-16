@@ -1,0 +1,65 @@
+/**
+ * Volunteer tab layout — bottom tabs for hall, tasks, messages, profile.
+ */
+
+import { Tabs } from "expo-router";
+import { Text } from "react-native";
+
+export default function VolunteerLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: true,
+        tabBarStyle: { minHeight: 64, paddingBottom: 8, paddingTop: 8 },
+        tabBarLabelStyle: { fontSize: 14, fontWeight: "600" },
+        tabBarActiveTintColor: "#2563EB",
+        tabBarInactiveTintColor: "#6B7280",
+      }}
+    >
+      <Tabs.Screen
+        name="hall"
+        options={{
+          title: "求助大厅",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24, color }}>📋</Text>
+          ),
+          tabBarAccessibilityLabel: "求助大厅",
+          headerTitle: "求助大厅",
+        }}
+      />
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: "我的任务",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24, color }}>✅</Text>
+          ),
+          tabBarAccessibilityLabel: "我接单的任务",
+          headerTitle: "我的任务",
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "消息",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24, color }}>💬</Text>
+          ),
+          tabBarAccessibilityLabel: "消息列表",
+          headerTitle: "消息",
+        }}
+      />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: "我的",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24, color }}>👤</Text>
+          ),
+          tabBarAccessibilityLabel: "个人中心",
+          headerTitle: "个人中心",
+        }}
+      />
+    </Tabs>
+  );
+}
