@@ -20,3 +20,16 @@ async def transcribe_voice(
     """Transcribe a voice file to text using AI."""
     result = await service.transcribe_voice(payload.voice_file_id)
     return schemas.TranscribeResponse(**result)
+
+
+@router.post("/synthesize", response_model=schemas.SynthesizeResponse)
+async def synthesize_speech(
+    payload: schemas.SynthesizeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> schemas.SynthesizeResponse:
+    """Convert text to speech audio using AI."""
+    result = await service.synthesize_speech(
+        payload.text, payload.language, payload.speed
+    )
+    return schemas.SynthesizeResponse(**result)

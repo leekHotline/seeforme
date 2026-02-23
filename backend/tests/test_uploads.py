@@ -74,3 +74,34 @@ async def test_presign_valid_voice(client: AsyncClient):
     }, headers=_auth(token))
 
     assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_presign_valid_video(client: AsyncClient):
+    """Test presigning a valid video upload."""
+    token = await _register_and_get_token(client, "upload5@test.com", "seeker")
+
+    resp = await client.post("/api/v1/uploads/presign", json={
+        "filename": "clip.mp4",
+        "mime_type": "video/mp4",
+        "size": 10 * 1024 * 1024,  # 10MB
+    }, headers=_auth(token))
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["file_id"]
+    assert data["category"] == "video"
+
+
+@pytest.mark.asyncio
+async def test_presign_video_too_large(client: AsyncClient):
+    """Test rejecting oversized video."""
+    token = await _register_and_get_token(client, "upload6@test.com", "seeker")
+
+    resp = await client.post("/api/v1/uploads/presign", json={
+        "filename": "huge.mp4",
+        "mime_type": "video/mp4",
+        "size": 60 * 1024 * 1024,  # 60MB > 50MB limit
+    }, headers=_auth(token))
+
+    assert resp.status_code == 400

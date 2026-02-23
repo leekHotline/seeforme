@@ -19,6 +19,7 @@ async def create_help_request(
         target_volunteer_id=payload.target_volunteer_id,
         voice_file_id=payload.voice_file_id,
         raw_text=payload.text,
+        priority=payload.priority,
         status="open",
     )
     db.add(req)
@@ -45,7 +46,7 @@ async def get_hall_requests(
         query = query.where(HelpRequest.status == status_filter)
         count_query = count_query.where(HelpRequest.status == status_filter)
 
-    query = query.order_by(HelpRequest.created_at.desc())
+    query = query.order_by(HelpRequest.priority.desc(), HelpRequest.created_at.desc())
     query = query.offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
