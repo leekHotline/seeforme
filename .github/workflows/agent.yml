@@ -4,6 +4,10 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   run-agent:
     if: github.event.label.name == 'agent:run'
@@ -12,6 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Simulate agent
+      # 1) 这里放“自动生成改动”的逻辑（先用一个最简单的示例验证链路）
+      - name: Make a change
         run: |
-          echo "Agent running for issue ${{ github.event.issue.number }}"
+          echo "auto update $(date -u)" >> AUTOLOG.md
+
+      # 2) 自动创建 PR（会 commit + push + open PR）
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Auto PR for issue #${{ github.event.issue.number }}"
+          body: |
+            This PR is auto-generated from issue #${{ github.event.issue.number }}.
+          branch: "agent/issue-${{ github.event.issue.number }}"
+          commit-message: "chore: auto update for issue #${{ github.event.issue.number }}"
