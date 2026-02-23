@@ -5,11 +5,20 @@
 import { Tabs } from "expo-router";
 import { Text } from "react-native";
 
+import {
+  NAV_HEADER_STYLE,
+  NAV_HEADER_TINT_COLOR,
+  NAV_HEADER_TITLE_STYLE,
+} from "@/lib/theme";
+
 export default function SeekerLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
+        headerStyle: NAV_HEADER_STYLE,
+        headerTintColor: NAV_HEADER_TINT_COLOR,
+        headerTitleStyle: NAV_HEADER_TITLE_STYLE,
         tabBarStyle: { minHeight: 64, paddingBottom: 8, paddingTop: 8 },
         tabBarLabelStyle: { fontSize: 14, fontWeight: "600" },
         tabBarActiveTintColor: "#2563EB",
