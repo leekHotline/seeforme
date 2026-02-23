@@ -1,0 +1,17 @@
+name: Agent Runner
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  run-agent:
+    if: github.event.label.name == 'agent:run'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Simulate agent
+        run: |
+          echo "Agent running for issue ${{ github.event.issue.number }}"
