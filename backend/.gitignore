@@ -12,8 +12,8 @@ build/
 # Database
 *.db
 
-# Uploads
-uploads/
+# Uploads (user-uploaded files at project root, not the app module)
+/uploads/
 
 # IDE
 .vscode/
