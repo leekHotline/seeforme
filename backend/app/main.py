@@ -19,6 +19,7 @@ from app.modules.uploads.router import router as uploads_router
 from app.modules.moderation.router import router as moderation_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.ai_assist.router import router as ai_assist_router
+from app.modules.image_analysis.router import router as image_analysis_router
 
 
 @asynccontextmanager
@@ -54,6 +55,7 @@ app.include_router(uploads_router, prefix=settings.API_V1_PREFIX)
 app.include_router(moderation_router, prefix=settings.API_V1_PREFIX)
 app.include_router(notifications_router, prefix=settings.API_V1_PREFIX)
 app.include_router(ai_assist_router, prefix=settings.API_V1_PREFIX)
+app.include_router(image_analysis_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")

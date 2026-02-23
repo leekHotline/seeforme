@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     MAX_VOICE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_IMAGE_TYPES: list[str] = ["image/jpeg", "image/png", "image/webp"]
     ALLOWED_VOICE_TYPES: list[str] = ["audio/mp4", "audio/mpeg", "audio/wav", "audio/x-m4a"]
+    MAX_VIDEO_SIZE: int = 50 * 1024 * 1024  # 50MB
+    ALLOWED_VIDEO_TYPES: list[str] = ["video/mp4", "video/quicktime", "video/webm"]
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

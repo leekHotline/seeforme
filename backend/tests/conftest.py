@@ -48,6 +48,7 @@ def _build_app():
     from app.modules.moderation.router import router as moderation_router
     from app.modules.notifications.router import router as notifications_router
     from app.modules.ai_assist.router import router as ai_assist_router
+    from app.modules.image_analysis.router import router as image_analysis_router
 
     test_app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
     test_app.add_middleware(
@@ -61,7 +62,7 @@ def _build_app():
         auth_router, users_router, help_requests_router,
         assignments_router, replies_router, feedback_router,
         uploads_router, moderation_router, notifications_router,
-        ai_assist_router,
+        ai_assist_router, image_analysis_router,
     ):
         test_app.include_router(r, prefix=settings.API_V1_PREFIX)
 

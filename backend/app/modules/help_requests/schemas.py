@@ -12,6 +12,7 @@ class HelpRequestCreateRequest(BaseModel):
     image_file_ids: Optional[list[str]] = Field(default=None, max_length=3)
     mode: str = Field(default="hall", pattern="^(hall|direct)$")
     target_volunteer_id: Optional[str] = None
+    priority: int = Field(default=0, ge=0, le=2)
 
 
 class HelpRequestResponse(BaseModel):
@@ -25,6 +26,7 @@ class HelpRequestResponse(BaseModel):
     raw_text: Optional[str] = None
     transcribed_text: Optional[str] = None
     category: Optional[str] = None
+    priority: int = 0
     created_at: datetime
     updated_at: datetime
 
