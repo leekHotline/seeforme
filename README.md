@@ -22,6 +22,8 @@
 
 ## 前端使用pnpm作为包管理工具 后端使用uv作为包管理工具
 
+## 前端ui/动画使用: nativewind + moti + react-native-reanimated
+
 # How to start?
 ```
 cd frontend
@@ -34,3 +36,10 @@ cd backend
 uv sync
 uv run main.py
 ```
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 /**
- * Authentication context — manages tokens, user profile, and role-based routing.
+ * Authentication context - manages auth state and route protection.
  */
 
 import React, {
@@ -13,7 +13,6 @@ import React, {
 import { useRouter, useSegments } from "expo-router";
 
 import * as storage from "@/lib/storage";
-
 import { api, ApiError } from "@/lib/api";
 import type {
   AuthTokenResponse,
@@ -23,11 +22,10 @@ import type {
   UserRole,
 } from "@/lib/types";
 
-// ── Types ────────────────────────────────────────
-
 interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
   user: UserProfile | null;
   role: UserRole | null;
 }
@@ -37,9 +35,9 @@ interface AuthContextValue extends AuthState {
   login: (data: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  enterGuest: (_role: UserRole) => Promise<void>;
+  exitGuest: () => Promise<void>;
 }
-
-// ── Context ──────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -49,12 +47,11 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-// ── Provider ─────────────────────────────────────
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     isLoading: true,
     isAuthenticated: false,
+    isGuest: false,
     user: null,
     role: null,
   });
@@ -62,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
 
-  // ── Persist / restore tokens ───────────────────
   const saveTokens = useCallback(async (tokens: AuthTokenResponse) => {
     await storage.setItem("access_token", tokens.access_token);
     await storage.setItem("refresh_token", tokens.refresh_token);
@@ -75,28 +71,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storage.deleteItem("role");
   }, []);
 
-  // ── Fetch profile ─────────────────────────────
   const fetchProfile = useCallback(async (): Promise<UserProfile | null> => {
     try {
       return await api.get<UserProfile>("/users/me");
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) return null;
-      throw e;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
     }
   }, []);
 
-  // ── Boot: check stored tokens ─────────────────
   useEffect(() => {
     (async () => {
       try {
         const token = await storage.getItem("access_token");
         const role = (await storage.getItem("role")) as UserRole | null;
+
         if (token && role) {
           const user = await fetchProfile();
           if (user) {
             setState({
               isLoading: false,
               isAuthenticated: true,
+              isGuest: false,
               user,
               role,
             });
@@ -104,46 +100,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch {
-        // ignore — treat as unauthenticated
+        // Ignore boot failures and reset to a safe unauthenticated state.
       }
+
       await clearTokens();
       setState({
         isLoading: false,
         isAuthenticated: false,
+        isGuest: false,
         user: null,
         role: null,
       });
     })();
-  }, [fetchProfile, clearTokens]);
+  }, [clearTokens, fetchProfile]);
 
-  // ── Route protection ──────────────────────────
   useEffect(() => {
     if (state.isLoading) return;
 
-    const inAuth = segments[0] === "(public)";
+    const inPublic = segments[0] === "(public)";
     const inSeeker = segments[0] === "(seeker)";
     const inVolunteer = segments[0] === "(volunteer)";
 
-    if (!state.isAuthenticated && !inAuth) {
-      router.replace("/(public)/welcome");
-    } else if (state.isAuthenticated && inAuth) {
-      if (state.role === "seeker") {
+    if (state.isAuthenticated) {
+      if (inPublic) {
+        router.replace(
+          state.role === "seeker" ? "/(seeker)/hall" : "/(volunteer)/hall"
+        );
+        return;
+      }
+
+      if (state.role === "seeker" && inVolunteer) {
         router.replace("/(seeker)/hall");
-      } else {
+        return;
+      }
+
+      if (state.role === "volunteer" && inSeeker) {
         router.replace("/(volunteer)/hall");
       }
-    } else if (state.isAuthenticated && state.role === "seeker" && inVolunteer) {
-      router.replace("/(seeker)/hall");
-    } else if (
-      state.isAuthenticated &&
-      state.role === "volunteer" &&
-      inSeeker
-    ) {
-      router.replace("/(volunteer)/hall");
+      return;
     }
-  }, [state.isLoading, state.isAuthenticated, state.role, segments, router]);
 
-  // ── Actions ────────────────────────────────────
+    if (!inPublic) {
+      router.replace("/(public)/login");
+    }
+  }, [router, segments, state.isAuthenticated, state.isLoading, state.role]);
+
   const register = useCallback(
     async (data: RegisterRequest) => {
       const tokens = await api.post<AuthTokenResponse>(
@@ -156,11 +157,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({
         isLoading: false,
         isAuthenticated: true,
+        isGuest: false,
         user,
         role: tokens.role,
       });
     },
-    [saveTokens, fetchProfile]
+    [fetchProfile, saveTokens]
   );
 
   const login = useCallback(
@@ -175,31 +177,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({
         isLoading: false,
         isAuthenticated: true,
+        isGuest: false,
         user,
         role: tokens.role,
       });
     },
-    [saveTokens, fetchProfile]
+    [fetchProfile, saveTokens]
   );
+
+  const enterGuest = useCallback(
+    async (_role: UserRole) => {
+      await clearTokens();
+      setState({
+        isLoading: false,
+        isAuthenticated: false,
+        isGuest: false,
+        user: null,
+        role: null,
+      });
+      router.replace("/(public)/login");
+    },
+    [clearTokens, router]
+  );
+
+  const exitGuest = useCallback(async () => {
+    setState((prev) => ({
+      ...prev,
+      isGuest: false,
+    }));
+  }, []);
 
   const logout = useCallback(async () => {
     await clearTokens();
     setState({
       isLoading: false,
       isAuthenticated: false,
+      isGuest: false,
       user: null,
       role: null,
     });
   }, [clearTokens]);
 
   const refreshProfile = useCallback(async () => {
+    if (!state.isAuthenticated) return;
     const user = await fetchProfile();
     if (user) {
       setState((prev) => ({ ...prev, user }));
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, state.isAuthenticated]);
 
-  // ── Value ──────────────────────────────────────
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
@@ -207,9 +233,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       refreshProfile,
+      enterGuest,
+      exitGuest,
     }),
-    [state, register, login, logout, refreshProfile]
+    [enterGuest, exitGuest, login, logout, refreshProfile, register, state]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+

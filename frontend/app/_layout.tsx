@@ -30,7 +30,7 @@ export default function RootLayout() {
     <GestureWrapper>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar style="auto" />
+          <StatusBar style="dark" />
           <Slot />
         </AuthProvider>
       </SafeAreaProvider>

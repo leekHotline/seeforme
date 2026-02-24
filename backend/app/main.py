@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.db import init_db
+from app.core.exception_handlers import register_exception_handlers
 
 # Import all routers
 from app.modules.auth.router import router as auth_router
@@ -34,6 +35,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan,
 )
+register_exception_handlers(app)
 
 # CORS (allow all for development)
 app.add_middleware(

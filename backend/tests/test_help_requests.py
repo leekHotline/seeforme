@@ -122,3 +122,48 @@ async def test_cancel_request(client: AsyncClient):
     )
     assert cancel_resp.status_code == 200
     assert cancel_resp.json()["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_create_text_only_help_request(client: AsyncClient):
+    """Text-only create should work without voice_file_id."""
+    token = await _register_and_get_token(client, "text_only@test.com", "seeker")
+
+    resp = await client.post(
+        "/api/v1/help-requests",
+        json={"text": "Only text payload", "mode": "hall"},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["raw_text"] == "Only text payload"
+
+
+@pytest.mark.asyncio
+async def test_seeker_can_list_own_requests(client: AsyncClient):
+    """Seeker should be able to query /help-requests/mine and see their own items."""
+    seeker_token = await _register_and_get_token(client, "mine_owner@test.com", "seeker")
+    other_seeker_token = await _register_and_get_token(client, "mine_other@test.com", "seeker")
+
+    create_resp = await client.post(
+        "/api/v1/help-requests",
+        json={"text": "owner request", "mode": "hall"},
+        headers=_auth(seeker_token),
+    )
+    assert create_resp.status_code == 201
+    owner_request_id = create_resp.json()["id"]
+
+    other_create_resp = await client.post(
+        "/api/v1/help-requests",
+        json={"text": "other request", "mode": "hall"},
+        headers=_auth(other_seeker_token),
+    )
+    assert other_create_resp.status_code == 201
+
+    mine_resp = await client.get("/api/v1/help-requests/mine", headers=_auth(seeker_token))
+    assert mine_resp.status_code == 200
+    payload = mine_resp.json()
+    assert payload["total"] >= 1
+    assert any(item["id"] == owner_request_id for item in payload["items"])
+    assert all(item["seeker_id"] == create_resp.json()["seeker_id"] for item in payload["items"])

@@ -1,40 +1,52 @@
-/**
- * Volunteer Tasks — list of claimed/active tasks.
+﻿/**
+ * Volunteer tasks list with guest-safe demo fallback.
  */
 
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  Pressable,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Animated from "react-native-reanimated";
 
+import AccessibleButton from "@/components/AccessibleButton";
+import GlassBackground from "@/components/GlassBackground";
+import GlassCard from "@/components/GlassCard";
+import StaggerItem from "@/components/StaggerItem";
 import StatusBadge from "@/components/StatusBadge";
 import { useAnnounce } from "@/lib/accessibility";
 import { api } from "@/lib/api";
-import type { HelpRequest } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
+import { demoVolunteerRequests } from "@/lib/demo-data";
+import type { HelpRequest, HelpRequestListResponse } from "@/lib/types";
 
 export default function VolunteerTasksScreen() {
   const router = useRouter();
   const { announce } = useAnnounce();
+  const { isAuthenticated, isGuest } = useAuth();
 
   const [tasks, setTasks] = useState<HelpRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [seed, setSeed] = useState(0);
+
+  const isDemo = useMemo(
+    () => isGuest || !isAuthenticated,
+    [isAuthenticated, isGuest]
+  );
 
   const load = useCallback(async () => {
-    try {
-      // TODO: backend should provide a /assignments/mine or filtered endpoint
-      // For now, use hall endpoint which returns tasks for volunteers
-      const data = await api.get<HelpRequest[]>("/help-requests/hall?status=claimed");
-      setTasks(data);
-    } catch {
-      announce("加载失败");
+    if (isDemo) {
+      setTasks(demoVolunteerRequests.filter((item) => item.status === "claimed"));
+      return;
     }
-  }, [announce]);
+
+    try {
+      const data = await api.get<HelpRequestListResponse>("/help-requests/hall?status=claimed");
+      setTasks(data.items);
+    } catch {
+      setTasks(demoVolunteerRequests.filter((item) => item.status === "claimed"));
+      announce("网络异常，已切换演示任务");
+    }
+  }, [announce, isDemo]);
 
   useEffect(() => {
     load();
@@ -43,49 +55,75 @@ export default function VolunteerTasksScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
+    setSeed((prev) => prev + 1);
     setRefreshing(false);
   };
 
-  const renderItem = ({ item }: { item: HelpRequest }) => (
-    <Pressable
-      onPress={() => router.push(`/(volunteer)/hall/${item.id}`)}
-      accessibilityLabel={`我的任务，状态${item.status}，点击查看`}
-      className="bg-white rounded-2xl p-5 mb-3 border border-gray-100"
-    >
-      <View className="flex-row items-center justify-between mb-2">
-        <StatusBadge status={item.status} />
-        <Text className="text-sm text-gray-400">
-          {new Date(item.created_at).toLocaleDateString("zh-CN")}
-        </Text>
-      </View>
-      <Text className="text-accessible-base text-gray-900" numberOfLines={2}>
-        {item.transcribed_text || item.raw_text || "语音求助"}
-      </Text>
-    </Pressable>
-  );
-
   return (
-    <SafeAreaView edges={["bottom"]} className="flex-1 bg-gray-50">
-      <FlatList
-        data={tasks}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: 16 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View className="items-center pt-20">
-            <Text className="text-6xl mb-4">📭</Text>
-            <Text className="text-accessible-base text-gray-500">
-              还没有接单的任务
+    <GlassBackground>
+      <SafeAreaView edges={["bottom"]} className="flex-1">
+        <Animated.ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: 14,
+            paddingBottom: 28,
+            gap: 12,
+          }}
+          refreshControl={
+            <RefreshControl
+              tintColor="#67E8F9"
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
+          }
+        >
+          <GlassCard contentClassName="p-6">
+            <Text className="text-accessible-lg font-semibold text-white">我的任务</Text>
+            <Text className="mt-2 text-accessible-sm text-slate-200">
+              已接单任务会显示在这里。下拉可刷新并重新播放入场动画。
             </Text>
-            <Text className="text-accessible-sm text-gray-400 mt-1">
-              去求助大厅浏览并接单
-            </Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+          </GlassCard>
+
+          {isDemo ? (
+            <GlassCard contentClassName="p-5">
+              <Text className="text-accessible-sm font-semibold text-cyan-100">游客模式</Text>
+              <Text className="mt-2 text-sm text-slate-300">演示数据不会写入服务器。</Text>
+              <View className="mt-4">
+                <AccessibleButton
+                  title="登录以管理真实任务"
+                  onPress={() => router.push("/(public)/login")}
+                />
+              </View>
+            </GlassCard>
+          ) : null}
+
+          {tasks.length === 0 ? (
+            <GlassCard contentClassName="items-center p-8">
+              <Text className="text-accessible-base font-semibold text-white">暂无已接单任务</Text>
+              <Text className="mt-2 text-sm text-slate-300">去大厅接单后会出现在这里</Text>
+            </GlassCard>
+          ) : (
+            tasks.map((item, index) => (
+              <StaggerItem key={`${item.id}-${seed}`} index={index + 1}>
+                <Pressable onPress={() => router.push(`/(volunteer)/hall/${item.id}`)}>
+                  <GlassCard contentClassName="p-5">
+                    <View className="mb-3 flex-row items-center justify-between">
+                      <StatusBadge status={item.status} />
+                      <Text className="text-sm text-slate-300">
+                        {new Date(item.created_at).toLocaleString("zh-CN")}
+                      </Text>
+                    </View>
+                    <Text className="text-accessible-sm text-slate-100" numberOfLines={3}>
+                      {item.transcribed_text || item.raw_text || "语音求助"}
+                    </Text>
+                  </GlassCard>
+                </Pressable>
+              </StaggerItem>
+            ))
+          )}
+        </Animated.ScrollView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }

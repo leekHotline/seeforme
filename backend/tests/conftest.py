@@ -38,6 +38,7 @@ def _build_app():
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
     from app.core.config import settings
+    from app.core.exception_handlers import register_exception_handlers
     from app.modules.auth.router import router as auth_router
     from app.modules.users.router import router as users_router
     from app.modules.help_requests.router import router as help_requests_router
@@ -51,6 +52,7 @@ def _build_app():
     from app.modules.image_analysis.router import router as image_analysis_router
 
     test_app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
+    register_exception_handlers(test_app)
     test_app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

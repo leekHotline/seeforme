@@ -1,21 +1,21 @@
-/**
- * Accessible button component.
- * Meets minimum touch target (64×64), provides haptic + speech feedback.
+﻿/**
+ * Accessible button component with haptics, announcements, and micro-interactions.
  */
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Pressable,
   Text,
   ActivityIndicator,
   type PressableProps,
-  type ViewStyle,
+  type GestureResponderEvent,
 } from "react-native";
+import { MotiView } from "moti";
+
 import { useAnnounce, useHaptic } from "@/lib/accessibility";
 
 interface AccessibleButtonProps extends Omit<PressableProps, "style"> {
   title: string;
-  /** Optional announce text (defaults to title) */
   announceText?: string;
   variant?: "primary" | "secondary" | "danger" | "ghost";
   loading?: boolean;
@@ -23,18 +23,24 @@ interface AccessibleButtonProps extends Omit<PressableProps, "style"> {
   textClassName?: string;
 }
 
-const variantStyles: Record<string, string> = {
-  primary: "bg-primary-600 active:bg-primary-700",
-  secondary: "bg-gray-200 active:bg-gray-300",
-  danger: "bg-error active:bg-red-600",
-  ghost: "bg-transparent active:bg-gray-100",
+const variantStyles: Record<
+  NonNullable<AccessibleButtonProps["variant"]>,
+  string
+> = {
+  primary: "bg-cyan-400 active:bg-cyan-300",
+  secondary: "bg-slate-200 active:bg-slate-100",
+  danger: "bg-red-500 active:bg-red-400",
+  ghost: "bg-white/70 active:bg-slate-100 border border-slate-200",
 };
 
-const variantTextStyles: Record<string, string> = {
-  primary: "text-white",
-  secondary: "text-gray-900",
+const variantTextStyles: Record<
+  NonNullable<AccessibleButtonProps["variant"]>,
+  string
+> = {
+  primary: "text-slate-900",
+  secondary: "text-slate-950",
   danger: "text-white",
-  ghost: "text-primary-600",
+  ghost: "text-slate-700",
 };
 
 export default function AccessibleButton({
@@ -46,46 +52,76 @@ export default function AccessibleButton({
   className = "",
   textClassName = "",
   onPress,
+  onPressIn,
+  onPressOut,
+  onHoverIn,
+  onHoverOut,
   ...rest
 }: AccessibleButtonProps) {
   const { announce } = useAnnounce();
   const { trigger } = useHaptic();
 
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
+
+  const isDisabled = disabled || loading;
+
   const handlePress = useCallback(
-    (e: any) => {
+    (event: GestureResponderEvent) => {
       trigger("light");
       announce(announceText ?? title);
-      onPress?.(e);
+      onPress?.(event);
     },
-    [trigger, announce, announceText, title, onPress]
+    [announce, announceText, onPress, title, trigger]
   );
 
   return (
-    <Pressable
-      onPress={handlePress}
-      disabled={disabled || loading}
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      accessibilityState={{ disabled: disabled || loading }}
-      className={`
-        min-h-touch min-w-touch items-center justify-center rounded-2xl px-6 py-4
-        ${variantStyles[variant]}
-        ${disabled ? "opacity-50" : ""}
-        ${className}
-      `}
-      {...rest}
+    <MotiView
+      animate={{
+        scale: pressed ? 0.985 : hovered ? 1.02 : 1,
+        opacity: isDisabled ? 0.55 : 1,
+      }}
+      transition={{ type: "timing", duration: 140 }}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === "secondary" ? "#111" : "#fff"}
-        />
-      ) : (
-        <Text
-          className={`text-accessible-base font-bold ${variantTextStyles[variant]} ${textClassName}`}
-        >
-          {title}
-        </Text>
-      )}
-    </Pressable>
+      <Pressable
+        onPress={handlePress}
+        disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: isDisabled }}
+        className={`
+          min-h-touch min-w-touch items-center justify-center rounded-2xl px-6 py-4
+          ${variantStyles[variant]}
+          ${className}
+        `}
+        onPressIn={(event) => {
+          setPressed(true);
+          onPressIn?.(event);
+        }}
+        onPressOut={(event) => {
+          setPressed(false);
+          onPressOut?.(event);
+        }}
+        onHoverIn={(event) => {
+          setHovered(true);
+          onHoverIn?.(event);
+        }}
+        onHoverOut={(event) => {
+          setHovered(false);
+          onHoverOut?.(event);
+        }}
+        {...rest}
+      >
+        {loading ? (
+          <ActivityIndicator color={variant === "secondary" ? "#0f172a" : "#ffffff"} />
+        ) : (
+          <Text
+            className={`text-accessible-base font-semibold ${variantTextStyles[variant]} ${textClassName}`}
+          >
+            {title}
+          </Text>
+        )}
+      </Pressable>
+    </MotiView>
   );
 }

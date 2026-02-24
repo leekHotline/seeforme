@@ -55,11 +55,20 @@ export interface AccessibilitySettings {
 
 // ── Help Requests ─────────────────────────────────
 export interface HelpRequestCreate {
-  voice_file_id: string;
+  voice_file_id?: string;
+  voice_file_ids?: string[];
   text?: string;
   image_file_ids?: string[];
+  video_file_ids?: string[];
   mode: RequestMode;
   target_volunteer_id?: string;
+  priority?: number;
+}
+
+export interface RequestAttachment {
+  id: string;
+  file_id: string;
+  file_type: "image" | "voice" | "video";
 }
 
 export interface HelpRequest {
@@ -67,11 +76,21 @@ export interface HelpRequest {
   seeker_id: string;
   mode: RequestMode;
   status: RequestStatus;
-  voice_file_id: string;
+  voice_file_id: string | null;
   raw_text: string | null;
   transcribed_text: string | null;
+  category?: string | null;
+  priority?: number;
+  attachments: RequestAttachment[];
   created_at: string;
   updated_at: string;
+}
+
+export interface HelpRequestListResponse {
+  items: HelpRequest[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // ── Reply ─────────────────────────────────────────
@@ -89,6 +108,10 @@ export interface Reply {
   voice_file_id: string | null;
   text: string | null;
   created_at: string;
+}
+
+export interface ReplyListResponse {
+  items: Reply[];
 }
 
 // ── Feedback ──────────────────────────────────────
@@ -116,4 +139,5 @@ export interface UploadPresignRequest {
 export interface UploadPresignResponse {
   file_id: string;
   upload_url: string;
+  category: "image" | "voice" | "video";
 }

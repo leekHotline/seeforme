@@ -1,5 +1,5 @@
-/**
- * App index — redirects to the appropriate screen based on auth state.
+﻿/**
+ * App index - routes user to auth or role workspace.
  */
 
 import { Redirect } from "expo-router";
@@ -11,19 +11,30 @@ export default function Index() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-        <ActivityIndicator size="large" color="#2563EB" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#020617",
+        }}
+      >
+        <ActivityIndicator size="large" color="#67E8F9" />
       </View>
     );
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/(public)/welcome" />;
+    return <Redirect href="/(public)/login" />;
   }
 
   if (role === "seeker") {
     return <Redirect href="/(seeker)/hall" />;
   }
 
-  return <Redirect href="/(volunteer)/hall" />;
+  if (role === "volunteer") {
+    return <Redirect href="/(volunteer)/hall" />;
+  }
+
+  return <Redirect href="/(public)/login" />;
 }

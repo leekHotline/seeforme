@@ -1,40 +1,53 @@
 /**
- * Seeker Profile — personal info and accessibility settings.
+ * Seeker profile and accessibility center.
  */
 
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Switch } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Pressable, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { MotiView } from "moti";
 
 import AccessibleButton from "@/components/AccessibleButton";
-import { useAuth } from "@/lib/auth";
+import GlassBackground from "@/components/GlassBackground";
+import GlassCard from "@/components/GlassCard";
 import { useAnnounce, useHaptic } from "@/lib/accessibility";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { AccessibilitySettings } from "@/lib/types";
 
 export default function SeekerProfileScreen() {
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, logout, isAuthenticated } = useAuth();
   const { announce } = useAnnounce();
   const { trigger } = useHaptic();
 
   const [settings, setSettings] = useState<AccessibilitySettings>({
     tts_enabled: true,
-    tts_rate: 1.0,
+    tts_rate: 1,
     haptic_enabled: true,
     voice_prompt_level: 2,
   });
+
+  const displayName = useMemo(
+    () => user?.email || user?.phone || "求助者",
+    [user?.email, user?.phone]
+  );
 
   const updateSetting = async (
     key: keyof AccessibilitySettings,
     value: boolean | number
   ) => {
-    const updated = { ...settings, [key]: value };
-    setSettings(updated);
+    const next = { ...settings, [key]: value };
+    setSettings(next);
     trigger("light");
     try {
-      await api.patch("/users/me/accessibility", updated);
+      if (isAuthenticated) {
+        await api.patch("/users/me/accessibility", next);
+      }
+      announce("设置已更新");
     } catch {
-      announce("保存设置失败");
+      announce("保存失败，请稍后重试");
     }
   };
 
@@ -45,55 +58,89 @@ export default function SeekerProfileScreen() {
   };
 
   return (
-    <SafeAreaView edges={["bottom"]} className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1 px-6 pt-4">
-        {/* Profile card */}
-        <View className="bg-white rounded-2xl p-5 mb-6">
-          <Text className="text-accessible-lg font-bold text-gray-900">
-            {user?.email || user?.phone || "用户"}
-          </Text>
-          <Text className="text-accessible-sm text-primary-600 mt-1">
-            求助者
-          </Text>
-        </View>
-
-        {/* Accessibility settings */}
-        <Text
-          className="text-accessible-base font-bold text-gray-900 mb-3"
-          accessibilityRole="header"
+    <GlassBackground>
+      <SafeAreaView edges={["bottom"]} className="flex-1 px-4 pt-3">
+        <MotiView
+          from={{ opacity: 0, translateY: 14 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 360 }}
         >
-          无障碍设置
-        </Text>
+          <GlassCard contentClassName="p-6">
+            <View className="flex-row items-center gap-4">
+              <View className="h-14 w-14 items-center justify-center rounded-2xl bg-cyan-300/25">
+                <Text className="text-xl font-semibold text-cyan-100">
+                  {(displayName[0] || "S").toUpperCase()}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-accessible-lg font-semibold text-white">{displayName}</Text>
+                <Text className="mt-1 text-sm text-slate-200">求助者账号 · 已启用实时协助</Text>
+              </View>
+            </View>
+          </GlassCard>
+        </MotiView>
 
-        <View className="bg-white rounded-2xl p-5 mb-6">
-          <View className="flex-row items-center justify-between min-h-touch">
-            <Text className="text-accessible-sm text-gray-900">语音播报</Text>
-            <Switch
-              value={settings.tts_enabled}
-              onValueChange={(v) => updateSetting("tts_enabled", v)}
-              accessibilityLabel="语音播报开关"
-            />
-          </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 380, delay: 90 }}
+        >
+          <GlassCard className="mt-3" contentClassName="p-5">
+            <Text className="text-accessible-base font-semibold text-white">无障碍偏好</Text>
+            <View className="mt-4 gap-4">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1 pr-4">
+                  <Text className="text-accessible-sm text-slate-100">语音播报</Text>
+                  <Text className="mt-1 text-xs text-slate-300">自动播报关键状态与回复</Text>
+                </View>
+                <Switch
+                  value={settings.tts_enabled}
+                  onValueChange={(value) => updateSetting("tts_enabled", value)}
+                />
+              </View>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1 pr-4">
+                  <Text className="text-accessible-sm text-slate-100">触觉反馈</Text>
+                  <Text className="mt-1 text-xs text-slate-300">按钮点击与关键事件震动提醒</Text>
+                </View>
+                <Switch
+                  value={settings.haptic_enabled}
+                  onValueChange={(value) => updateSetting("haptic_enabled", value)}
+                />
+              </View>
+            </View>
+          </GlassCard>
+        </MotiView>
 
-          <View className="flex-row items-center justify-between min-h-touch border-t border-gray-100">
-            <Text className="text-accessible-sm text-gray-900">触觉反馈</Text>
-            <Switch
-              value={settings.haptic_enabled}
-              onValueChange={(v) => updateSetting("haptic_enabled", v)}
-              accessibilityLabel="触觉反馈开关"
-            />
-          </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 24 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 420, delay: 130 }}
+        >
+          <GlassCard className="mt-3" contentClassName="p-5">
+            <Text className="text-accessible-base font-semibold text-white">快捷操作</Text>
+            <View className="mt-3 gap-2">
+              <Pressable
+                className="rounded-2xl bg-white/10 px-4 py-3"
+                onPress={() => router.push("/(seeker)/hall")}
+              >
+                <Text className="text-accessible-sm font-medium text-slate-100">查看我的求助</Text>
+              </Pressable>
+              <Pressable
+                className="rounded-2xl bg-white/10 px-4 py-3"
+                onPress={() => router.push("/(seeker)/messages")}
+              >
+                <Text className="text-accessible-sm font-medium text-slate-100">查看消息通知</Text>
+              </Pressable>
+            </View>
+          </GlassCard>
+        </MotiView>
+
+        <View className="mt-4">
+          <AccessibleButton title="退出登录" variant="danger" onPress={handleLogout} />
         </View>
-
-        {/* Logout */}
-        <AccessibleButton
-          title="退出登录"
-          variant="danger"
-          announceText="退出登录"
-          onPress={handleLogout}
-          className="mb-8"
-        />
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }
+

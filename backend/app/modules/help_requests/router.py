@@ -23,6 +23,7 @@ async def create_help_request(
 ) -> schemas.HelpRequestResponse:
     """Create a new help request. Requires seeker role."""
     req = await service.create_help_request(db, current_user.id, payload)
+    await db.refresh(req, attribute_names=["attachments"])
     return schemas.HelpRequestResponse.model_validate(req)
 
 
@@ -36,6 +37,30 @@ async def list_hall_requests(
 ) -> schemas.HelpRequestListResponse:
     """List help requests in the public hall. Requires volunteer role."""
     items, total = await service.get_hall_requests(db, page, page_size, status_filter)
+    return schemas.HelpRequestListResponse(
+        items=[schemas.HelpRequestResponse.model_validate(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/mine", response_model=schemas.HelpRequestListResponse)
+async def list_my_requests(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status_filter: str | None = Query(None, alias="status"),
+    current_user: User = Depends(require_role("seeker")),
+    db: AsyncSession = Depends(get_db),
+) -> schemas.HelpRequestListResponse:
+    """List current seeker's own help requests."""
+    items, total = await service.get_seeker_requests(
+        db,
+        seeker_id=current_user.id,
+        page=page,
+        page_size=page_size,
+        status_filter=status_filter,
+    )
     return schemas.HelpRequestListResponse(
         items=[schemas.HelpRequestResponse.model_validate(r) for r in items],
         total=total,
