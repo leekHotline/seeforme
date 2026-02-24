@@ -16,8 +16,9 @@ import FeedbackModal from "@/components/FeedbackModal";
 import GlassBackground from "@/components/GlassBackground";
 import GlassCard from "@/components/GlassCard";
 import { useAnnounce, useHaptic } from "@/lib/accessibility";
-import { api } from "@/lib/api";
+import { api, API_BASE_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import * as storage from "@/lib/storage";
 import type { HelpRequestCreate, UploadPresignResponse } from "@/lib/types";
 
 interface ModalState {
@@ -236,6 +237,25 @@ export default function SeekerCreateScreen() {
       mime_type: media.mimeType,
       size: media.size,
     });
+
+    // Upload the actual file binary to the server
+    const formData = new FormData();
+    formData.append("file", {
+      uri: media.uri,
+      name: media.fileName,
+      type: media.mimeType,
+    } as unknown as Blob);
+
+    const token = await storage.getItem("access_token");
+    const uploadResp = await fetch(`${API_BASE_URL}${result.upload_url}`, {
+      method: "PUT",
+      body: formData,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!uploadResp.ok) {
+      throw new Error(`File upload failed: ${uploadResp.status}`);
+    }
+
     return result.file_id;
   };
 

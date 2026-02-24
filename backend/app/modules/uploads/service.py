@@ -1,5 +1,9 @@
 """Upload business logic."""
 
+import os
+
+import aiofiles
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -55,7 +59,31 @@ async def presign_upload(
     db.add(record)
     await db.flush()
 
-    # Placeholder upload URL – in production this would be a cloud storage presigned URL
-    upload_url = f"/uploads/{record.id}/{filename}"
+    # Upload URL points to the PUT endpoint where the client will send the file binary
+    upload_url = f"/uploads/{record.id}"
 
     return {"file_id": record.id, "upload_url": upload_url, "category": category}
+
+
+async def get_upload_record(db: AsyncSession, file_id: str) -> UploadedFile | None:
+    """Get an upload record by ID."""
+    stmt = select(UploadedFile).where(UploadedFile.id == file_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def get_upload_file_path(file_id: str, filename: str) -> str:
+    """Return the absolute path where the uploaded file is stored."""
+    safe_name = os.path.basename(filename).replace("\x00", "")
+    return os.path.join(settings.UPLOAD_DIR, file_id, safe_name)
+
+
+async def save_upload_file(file_id: str, filename: str, data: bytes) -> str:
+    """Save uploaded file bytes to disk. Returns the saved file path."""
+    safe_name = os.path.basename(filename).replace("\x00", "")
+    upload_dir = os.path.join(settings.UPLOAD_DIR, file_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, safe_name)
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(data)
+    return file_path
