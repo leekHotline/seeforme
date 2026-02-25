@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, RefreshControl, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MotiView } from "moti";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -140,9 +141,9 @@ export default function SeekerHallScreen() {
         >
           <Animated.View style={heroStyle}>
             <GlassCard tone="light" contentClassName="p-6">
-              <Text className="text-accessible-lg font-semibold text-slate-900">白色主题 · 求助大厅</Text>
+              <Text className="text-accessible-lg font-semibold text-slate-900">求助大厅</Text>
               <Text className="mt-2 text-accessible-sm text-slate-600">
-                下面先展示三种素材卡片：图文、视频+文字、音频+文字。下拉可刷新并重播入场动画。
+                实时查看你的求助记录。支持图文、视频和语音素材，点击卡片可进入详情。
               </Text>
             </GlassCard>
           </Animated.View>
@@ -197,56 +198,86 @@ export default function SeekerHallScreen() {
               return (
                 <StaggerItem key={`${item.id}-${refreshSeed}`} index={index + 5}>
                   <Pressable onPress={() => openDetail(item.id)} accessibilityRole="button">
-                    <GlassCard tone="light" contentClassName="p-5">
-                      <View className="mb-3 flex-row items-center justify-between">
-                        <StatusBadge status={item.status} />
-                        <Text className="text-sm text-slate-500">
-                          {new Date(item.created_at).toLocaleString("zh-CN", {
-                            month: "numeric",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </Text>
-                      </View>
-                      <Text className="text-accessible-sm leading-7 text-slate-700" numberOfLines={3}>
-                        {item.transcribed_text || item.raw_text || "语音求助"}
-                      </Text>
-
-                      {imageAttachments[0]?.file_url ? (
-                        <SecureImage
-                          endpoint={imageAttachments[0].file_url}
-                          className="mt-3 h-36 w-full rounded-2xl"
-                        />
-                      ) : null}
-
-                      {voiceAttachments[0]?.file_url ? (
-                        <View className="mt-3">
-                          <AttachmentAudioPlayer
-                            endpoint={voiceAttachments[0].file_url}
-                            label="语音内容"
-                            compact
-                          />
-                        </View>
-                      ) : null}
-
-                      <View className="mt-3 flex-row flex-wrap gap-2">
-                        {mediaTypes.map((type) => (
+                    {({ pressed }) => (
+                      <MotiView
+                        animate={{ scale: pressed ? 0.988 : 1, translateY: pressed ? 2 : 0 }}
+                        transition={{ type: "timing", duration: 140 }}
+                      >
+                        <GlassCard
+                          tone="light"
+                          className="border-slate-200/80 shadow-sm shadow-cyan-200/40"
+                          contentClassName="relative overflow-hidden p-5"
+                        >
                           <View
-                            key={`${item.id}-${type}`}
-                            className="rounded-full bg-slate-200 px-3 py-1"
-                          >
-                            <Text className="text-xs font-semibold text-slate-700">
-                              {type === "image"
-                                ? "图文"
-                                : type === "video"
-                                  ? "视频"
-                                  : "语音"}
+                            pointerEvents="none"
+                            className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-cyan-100/60"
+                          />
+
+                          <View className="mb-3 flex-row items-center justify-between">
+                            <StatusBadge status={item.status} />
+                            <Text className="text-sm text-slate-500">
+                              {new Date(item.created_at).toLocaleString("zh-CN", {
+                                month: "numeric",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </Text>
                           </View>
-                        ))}
-                      </View>
-                    </GlassCard>
+
+                          <Text className="text-accessible-base font-semibold text-slate-900">
+                            {mediaTypes.includes("voice")
+                              ? "语音求助"
+                              : mediaTypes.includes("video")
+                                ? "视频求助"
+                                : "图文求助"}
+                          </Text>
+                          <Text className="mt-1 text-accessible-sm leading-7 text-slate-700" numberOfLines={3}>
+                            {item.transcribed_text || item.raw_text || "点击查看求助详情"}
+                          </Text>
+
+                          {imageAttachments[0]?.file_url ? (
+                            <SecureImage
+                              endpoint={imageAttachments[0].file_url}
+                              className="mt-3 h-36 w-full rounded-2xl"
+                            />
+                          ) : null}
+
+                          {voiceAttachments[0]?.file_url ? (
+                            <View className="mt-3 rounded-2xl border border-cyan-200/80 bg-cyan-50/70 p-2.5">
+                              <AttachmentAudioPlayer
+                                endpoint={voiceAttachments[0].file_url}
+                                label="语音内容"
+                                speakerName="我"
+                                subtitle={new Date(item.created_at).toLocaleString("zh-CN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                                badge="voice"
+                                compact
+                              />
+                            </View>
+                          ) : null}
+
+                          <View className="mt-3 flex-row flex-wrap gap-2">
+                            {mediaTypes.map((type) => (
+                              <View
+                                key={`${item.id}-${type}`}
+                                className="rounded-full border border-slate-200 bg-white/80 px-3 py-1"
+                              >
+                                <Text className="text-xs font-semibold text-slate-700">
+                                  {type === "image"
+                                    ? "图文"
+                                    : type === "video"
+                                      ? "视频"
+                                      : "语音"}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </GlassCard>
+                      </MotiView>
+                    )}
                   </Pressable>
                 </StaggerItem>
               );

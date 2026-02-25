@@ -4,12 +4,16 @@
     {
       "label": "🚀 Push to main",
       "type": "shell",
-      "command": "git add . && git commit -m \"auto\" && git push origin main",
-      "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
+      "command": "git add . && git commit -m \"${input:commitMessage}\" && git push origin main",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Enter commit message",
+      "default": "feat: "
     }
   ]
 }

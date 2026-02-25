@@ -245,6 +245,12 @@ export default function VolunteerRequestDetail() {
                     key={media.id}
                     endpoint={media.file_url}
                     label={`语音 ${index + 1}`}
+                    speakerName="求助者"
+                    subtitle={new Date(request.created_at).toLocaleString("zh-CN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    badge="voice"
                   />
                 ) : null
               )}

@@ -3,9 +3,10 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { MotiView } from "moti";
 
 import AccessibleButton from "@/components/AccessibleButton";
 import AttachmentAudioPlayer from "@/components/AttachmentAudioPlayer";
@@ -178,105 +179,158 @@ export default function SeekerRequestDetail() {
   return (
     <GlassBackground>
       <SafeAreaView edges={["bottom"]} className="flex-1 px-4 pt-3">
-        <GlassCard contentClassName="p-5">
-          <View className="mb-3 flex-row items-center justify-between">
-            <StatusBadge status={request.status} />
-            <Text className="text-sm text-slate-300">
-              {new Date(request.created_at).toLocaleString("zh-CN")}
-            </Text>
-          </View>
-          <Text className="text-accessible-sm leading-7 text-slate-100">
-            {request.transcribed_text || request.raw_text || "（语音求助）"}
-          </Text>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 30, gap: 12 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <MotiView
+            from={{ opacity: 0, translateY: 14 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 320 }}
+          >
+            <GlassCard
+              tone="light"
+              className="border-slate-200/80 shadow-sm shadow-cyan-200/40"
+              contentClassName="relative overflow-hidden p-5"
+            >
+              <View
+                pointerEvents="none"
+                className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-cyan-100/60"
+              />
 
-          {imageAttachments.length > 0 ? (
-            <View className="mt-3 gap-2">
-              {imageAttachments.map((media) =>
-                media.file_url ? (
-                  <SecureImage
-                    key={media.id}
-                    endpoint={media.file_url}
-                    className="h-40 w-full rounded-2xl"
-                  />
-                ) : null
-              )}
-            </View>
-          ) : null}
-
-          {voiceAttachments.length > 0 ? (
-            <View className="mt-3 gap-2">
-              {voiceAttachments.map((media, index) =>
-                media.file_url ? (
-                  <AttachmentAudioPlayer
-                    key={media.id}
-                    endpoint={media.file_url}
-                    label={`语音 ${index + 1}`}
-                  />
-                ) : null
-              )}
-            </View>
-          ) : null}
-
-          <View className="mt-3 flex-row flex-wrap gap-2">
-            {mediaTypes.map((type) => (
-              <View key={type} className="rounded-full bg-white/15 px-3 py-1">
-                <Text className="text-xs font-semibold text-slate-100">
-                  {type === "image" ? "图文" : type === "video" ? "视频" : "语音"}
+              <View className="mb-3 flex-row items-center justify-between">
+                <StatusBadge status={request.status} />
+                <Text className="text-sm text-slate-500">
+                  {new Date(request.created_at).toLocaleString("zh-CN")}
                 </Text>
               </View>
-            ))}
-          </View>
-        </GlassCard>
 
-        <GlassCard className="mt-3" contentClassName="p-5">
-          <Text className="text-accessible-base font-semibold text-white">回复 ({replies.length})</Text>
-          {replies.length === 0 ? (
-            <Text className="mt-2 text-sm text-slate-300">暂时还没有回复，请稍后刷新。</Text>
-          ) : (
-            <View className="mt-3 gap-2">
-              {replies.map((reply) => (
-                <View key={reply.id} className="rounded-2xl bg-slate-800/60 p-3">
-                  <Text className="text-sm text-cyan-200">
-                    {reply.reply_type === "voice" ? "语音回复" : "文本回复"}
-                  </Text>
-                  <Text className="mt-1 text-accessible-sm text-slate-100">
-                    {reply.text || "（语音内容）"}
-                  </Text>
+              <Text className="text-accessible-base font-semibold text-slate-900">
+                求助详情
+              </Text>
+              <Text className="mt-1 text-accessible-sm leading-7 text-slate-700">
+                {request.transcribed_text || request.raw_text || "（语音求助）"}
+              </Text>
+
+              {imageAttachments.length > 0 ? (
+                <View className="mt-3 gap-2">
+                  {imageAttachments.map((media) =>
+                    media.file_url ? (
+                      <SecureImage
+                        key={media.id}
+                        endpoint={media.file_url}
+                        className="h-40 w-full rounded-2xl"
+                      />
+                    ) : null
+                  )}
                 </View>
-              ))}
+              ) : null}
+
+              {voiceAttachments.length > 0 ? (
+                <View className="mt-3 gap-2 rounded-2xl border border-cyan-200/80 bg-cyan-50/70 p-2.5">
+                  {voiceAttachments.map((media, index) =>
+                    media.file_url ? (
+                      <AttachmentAudioPlayer
+                        key={media.id}
+                        endpoint={media.file_url}
+                        label={`语音 ${index + 1}`}
+                        speakerName="我"
+                        subtitle={new Date(request.created_at).toLocaleString("zh-CN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        badge="voice"
+                      />
+                    ) : null
+                  )}
+                </View>
+              ) : null}
+
+              <View className="mt-3 flex-row flex-wrap gap-2">
+                {mediaTypes.map((type) => (
+                  <View
+                    key={type}
+                    className="rounded-full border border-slate-200 bg-white/80 px-3 py-1"
+                  >
+                    <Text className="text-xs font-semibold text-slate-700">
+                      {type === "image" ? "图文" : type === "video" ? "视频" : "语音"}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </GlassCard>
+          </MotiView>
+
+          <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 340, delay: 60 }}
+          >
+            <GlassCard
+              tone="light"
+              className="border-slate-200/80"
+              contentClassName="p-5"
+            >
+              <Text className="text-accessible-base font-semibold text-slate-900">回复 ({replies.length})</Text>
+              {replies.length === 0 ? (
+                <Text className="mt-2 text-sm text-slate-600">暂时还没有回复，请稍后刷新。</Text>
+              ) : (
+                <View className="mt-3 gap-2">
+                  {replies.map((reply) => (
+                    <View
+                      key={reply.id}
+                      className="rounded-2xl border border-slate-200 bg-white/90 px-3 py-3"
+                    >
+                      <Text className="text-sm font-semibold text-cyan-700">
+                        {reply.reply_type === "voice" ? "语音回复" : "文本回复"}
+                      </Text>
+                      <Text className="mt-1 text-accessible-sm text-slate-700">
+                        {reply.text || "（语音内容）"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </GlassCard>
+          </MotiView>
+
+          <MotiView
+            from={{ opacity: 0, translateY: 24 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 360, delay: 120 }}
+          >
+            <View className="mt-1 gap-3">
+              {canFeedback ? (
+                <>
+                  <AccessibleButton
+                    title="标记为已解决"
+                    onPress={() => guardedAction(() => handleFeedback(true))}
+                  />
+                  <AccessibleButton
+                    title="标记为未解决"
+                    variant="danger"
+                    onPress={() => guardedAction(() => handleFeedback(false))}
+                  />
+                </>
+              ) : null}
+
+              {canCancel.includes(request.status) ? (
+                <AccessibleButton
+                  title="取消求助"
+                  variant="ghost"
+                  onPress={() => guardedAction(handleCancel)}
+                />
+              ) : null}
+
+              <AccessibleButton
+                title="返回大厅"
+                variant="secondary"
+                onPress={() => router.replace("/(seeker)/hall")}
+              />
             </View>
-          )}
-        </GlassCard>
-
-        <View className="mt-4 gap-3">
-          {canFeedback ? (
-            <>
-              <AccessibleButton
-                title="标记为已解决"
-                onPress={() => guardedAction(() => handleFeedback(true))}
-              />
-              <AccessibleButton
-                title="标记为未解决"
-                variant="danger"
-                onPress={() => guardedAction(() => handleFeedback(false))}
-              />
-            </>
-          ) : null}
-
-          {canCancel.includes(request.status) ? (
-            <AccessibleButton
-              title="取消求助"
-              variant="ghost"
-              onPress={() => guardedAction(handleCancel)}
-            />
-          ) : null}
-
-          <AccessibleButton
-            title="返回大厅"
-            variant="secondary"
-            onPress={() => router.replace("/(seeker)/hall")}
-          />
-        </View>
+          </MotiView>
+        </ScrollView>
       </SafeAreaView>
 
       <FeedbackModal

@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Seeker create request screen with media capture/upload actions.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -47,11 +47,11 @@ const initialModal: ModalState = {
 
 function formatSeconds(durationMillis: number): string {
   const total = Math.floor(durationMillis / 1000);
-  const m = Math.floor(total / 60)
+  const minute = Math.floor(total / 60)
     .toString()
     .padStart(2, "0");
-  const s = (total % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+  const second = (total % 60).toString().padStart(2, "0");
+  return `${minute}:${second}`;
 }
 
 function buildMedia(filenamePrefix: string, uri: string, mimeType: string, size?: number): PickedMedia {
@@ -61,17 +61,20 @@ function buildMedia(filenamePrefix: string, uri: string, mimeType: string, size?
       ? "webp"
       : mimeType.includes("webm")
         ? "webm"
-      : mimeType.includes("quicktime")
-        ? "mov"
-        : mimeType.includes("mp4")
-          ? "mp4"
-        : mimeType.includes("mpeg")
-            ? "mp3"
-            : mimeType.includes("wav")
-              ? "wav"
-              : mimeType.includes("m4a")
-                ? "m4a"
-              : "jpg";
+        : mimeType.includes("quicktime")
+          ? "mov"
+          : mimeType.includes("audio/mp4")
+            ? "m4a"
+            : mimeType.includes("mp4")
+              ? "mp4"
+              : mimeType.includes("mpeg")
+                ? "mp3"
+                : mimeType.includes("wav")
+                  ? "wav"
+                  : mimeType.includes("m4a")
+                    ? "m4a"
+                    : "jpg";
+
   return {
     uri,
     mimeType,
@@ -94,12 +97,12 @@ function extensionFromMimeType(mimeType: string): string {
   if (normalized.includes("webp")) return "webp";
   if (normalized.includes("webm")) return "webm";
   if (normalized.includes("quicktime")) return "mov";
+  if (normalized.startsWith("audio/mp4")) return "m4a";
   if (normalized.includes("mp4")) return "mp4";
   if (normalized.includes("mpeg")) return "mp3";
   if (normalized.includes("wav")) return "wav";
   if (normalized.includes("m4a")) return "m4a";
-  if (normalized.includes("jpeg")) return "jpg";
-  if (normalized.includes("jpg")) return "jpg";
+  if (normalized.includes("jpeg") || normalized.includes("jpg")) return "jpg";
   return "bin";
 }
 
@@ -121,9 +124,23 @@ export default function SeekerCreateScreen() {
   const [videos, setVideos] = useState<PickedMedia[]>([]);
   const [audioFile, setAudioFile] = useState<PickedMedia | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalState>(initialModal);
+
+  useEffect(() => {
+    if (!recording) {
+      setRecordingSeconds(0);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setRecordingSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [recording]);
 
   const closeModal = () => setModal(initialModal);
 
@@ -137,13 +154,7 @@ export default function SeekerCreateScreen() {
   };
 
   const hasContent = useMemo(
-    () =>
-      Boolean(
-        text.trim() ||
-          images.length > 0 ||
-          videos.length > 0 ||
-          audioFile
-      ),
+    () => Boolean(text.trim() || images.length > 0 || videos.length > 0 || audioFile),
     [audioFile, images.length, text, videos.length]
   );
 
@@ -151,18 +162,19 @@ export default function SeekerCreateScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       trigger("warning");
-      showModal("info", "权限被拒绝", "请先允许访问相册。");
+      showModal("info", "需要相册权限", "请先允许访问相册，才能上传图片。");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.8,
+      quality: 0.82,
       selectionLimit: 3,
     });
 
     if (result.canceled) return;
+
     const next = result.assets
       .slice(0, 3)
       .map((asset) =>
@@ -173,6 +185,7 @@ export default function SeekerCreateScreen() {
           asset.fileSize
         )
       );
+
     setImages(next);
     trigger("light");
   };
@@ -181,14 +194,15 @@ export default function SeekerCreateScreen() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       trigger("warning");
-      showModal("info", "权限被拒绝", "请先允许访问相机。");
+      showModal("info", "需要相机权限", "请先允许访问相机，才能拍照上传。");
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+      quality: 0.82,
     });
+
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
@@ -202,7 +216,7 @@ export default function SeekerCreateScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       trigger("warning");
-      showModal("info", "权限被拒绝", "请先允许访问相册。");
+      showModal("info", "需要相册权限", "请先允许访问相册，才能选择视频。");
       return;
     }
 
@@ -211,16 +225,12 @@ export default function SeekerCreateScreen() {
       quality: 0.8,
       selectionLimit: 1,
     });
+
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
     setVideos([
-      buildMedia(
-        "video",
-        asset.uri,
-        asset.mimeType || "video/mp4",
-        asset.fileSize
-      ),
+      buildMedia("video", asset.uri, asset.mimeType || "video/mp4", asset.fileSize),
     ]);
     trigger("light");
   };
@@ -229,7 +239,7 @@ export default function SeekerCreateScreen() {
     const permission = await Audio.requestPermissionsAsync();
     if (!permission.granted) {
       trigger("warning");
-      showModal("info", "权限被拒绝", "请先允许访问麦克风。");
+      showModal("info", "需要麦克风权限", "请先允许使用麦克风，才能录制语音。");
       return;
     }
 
@@ -238,10 +248,10 @@ export default function SeekerCreateScreen() {
       playsInSilentModeIOS: true,
     });
 
-    const created = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
+    const created = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
     setRecording(created.recording);
+    setAudioFile(null);
+    setAudioDuration(0);
     trigger("medium");
   };
 
@@ -253,18 +263,17 @@ export default function SeekerCreateScreen() {
     const status = await recording.getStatusAsync();
     setRecording(null);
 
-    if (uri) {
-      const durationMillis =
-        "durationMillis" in status && typeof status.durationMillis === "number"
-          ? status.durationMillis
-          : 0;
-      const recordedMimeType = Platform.OS === "web" ? "audio/webm" : "audio/mp4";
-      setAudioFile(
-        buildMedia("voice", uri, recordedMimeType)
-      );
-      setAudioDuration(durationMillis);
-      trigger("success");
-    }
+    if (!uri) return;
+
+    const durationMillis =
+      "durationMillis" in status && typeof status.durationMillis === "number"
+        ? status.durationMillis
+        : recordingSeconds * 1000;
+
+    const recordedMimeType = Platform.OS === "web" ? "audio/webm" : "audio/mp4";
+    setAudioFile(buildMedia("voice", uri, recordedMimeType));
+    setAudioDuration(durationMillis);
+    trigger("success");
   };
 
   const createUploadRecord = async (media: PickedMedia) => {
@@ -283,11 +292,14 @@ export default function SeekerCreateScreen() {
       uploadSize = blob.size;
       formData.append("content", blob, uploadFileName);
     } else {
-      formData.append("content", {
-        uri: media.uri,
-        name: uploadFileName,
-        type: uploadMimeType,
-      } as unknown as Blob);
+      formData.append(
+        "content",
+        {
+          uri: media.uri,
+          name: uploadFileName,
+          type: uploadMimeType,
+        } as unknown as Blob
+      );
     }
 
     const result = await api.post<UploadPresignResponse>("/uploads/presign", {
@@ -303,12 +315,12 @@ export default function SeekerCreateScreen() {
   const handleSubmit = async () => {
     if (!hasContent) {
       trigger("warning");
-      showModal("info", "内容为空", "请至少填写文字或添加一种媒体。");
+      showModal("info", "内容为空", "请至少输入文字或添加一种素材。");
       return;
     }
 
     if (!isAuthenticated) {
-      showModal("info", "请先登录", "当前版本已关闭游客发布，请先登录。");
+      showModal("info", "请先登录", "当前版本需要登录后才能发布真实求助。");
       return;
     }
 
@@ -318,9 +330,7 @@ export default function SeekerCreateScreen() {
       const videoIds = await Promise.all(videos.map(createUploadRecord));
       const voiceId = audioFile ? await createUploadRecord(audioFile) : undefined;
 
-      const payload: HelpRequestCreate = {
-        mode: "hall",
-      };
+      const payload: HelpRequestCreate = { mode: "hall" };
       if (text.trim()) payload.text = text.trim();
       if (imageIds.length > 0) payload.image_file_ids = imageIds;
       if (videoIds.length > 0) payload.video_file_ids = videoIds;
@@ -331,7 +341,7 @@ export default function SeekerCreateScreen() {
 
       await api.post("/help-requests", payload);
       trigger("success");
-      showModal("success", "发布成功", "求助已进入大厅，正在等待志愿者响应。");
+      showModal("success", "发布成功", "你的求助已发布到大厅，正在等待志愿者响应。");
     } catch {
       trigger("error");
       showModal("error", "发布失败", "网络异常或服务繁忙，请稍后重试。");
@@ -347,58 +357,116 @@ export default function SeekerCreateScreen() {
           className="flex-1"
           contentContainerStyle={{ gap: 12, paddingBottom: 28 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <MotiView
-            from={{ opacity: 0, translateY: 14 }}
+            from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 360 }}
+            transition={{ type: "timing", duration: 280 }}
           >
-            <GlassCard contentClassName="p-6">
-              <Text className="text-accessible-lg font-semibold text-white">发布求助</Text>
-              <Text className="mt-2 text-accessible-sm text-slate-200">
-                支持文字、图片、视频与语音。你也可以直接调用相机和麦克风输入。
+            <GlassCard
+              tone="light"
+              className="border-slate-200/80 shadow-sm shadow-cyan-200/40"
+              contentClassName="relative overflow-hidden p-6"
+            >
+              <View
+                pointerEvents="none"
+                className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-cyan-100/70"
+              />
+              <Text className="text-accessible-lg font-semibold text-slate-900">发布求助</Text>
+              <Text className="mt-2 text-sm leading-6 text-slate-600">
+                支持文字、图片、视频和语音。信息越完整，志愿者响应越快。
               </Text>
+
+              <View className="mt-4 flex-row flex-wrap gap-2">
+                <Text className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                  最多 3 张图片
+                </Text>
+                <Text className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                  最多 1 个视频
+                </Text>
+                <Text className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                  语音优先识别
+                </Text>
+              </View>
+            </GlassCard>
+          </MotiView>
+
+          <MotiView
+            from={{ opacity: 0, translateY: 18 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 320, delay: 60 }}
+          >
+            <GlassCard tone="light" className="border-slate-200/80" contentClassName="p-5">
+              <AccessibleInput
+                label="求助内容"
+                placeholder="例如：请帮我识别药盒上的用法和剂量，顺便确认窗口位置。"
+                value={text}
+                onChangeText={setText}
+                multiline
+                numberOfLines={5}
+                labelClassName="text-slate-800"
+                inputClassName="min-h-[120px] border-slate-200 bg-white text-slate-900"
+                textAlignVertical="top"
+              />
+
+              <View className="gap-2">
+                <View className="flex-row gap-2">
+                  <AccessibleButton
+                    title="选择图片"
+                    variant="secondary"
+                    className="flex-1 border border-slate-200 bg-white"
+                    onPress={pickImages}
+                  />
+                  <AccessibleButton
+                    title="拍照上传"
+                    variant="secondary"
+                    className="flex-1 border border-slate-200 bg-white"
+                    onPress={captureImage}
+                  />
+                </View>
+
+                <View className="flex-row gap-2">
+                  <AccessibleButton
+                    title="选择视频"
+                    variant="secondary"
+                    className="flex-1 border border-slate-200 bg-white"
+                    onPress={pickVideo}
+                  />
+                  {recording ? (
+                    <AccessibleButton
+                      title="结束录音"
+                      variant="danger"
+                      className="flex-1"
+                      onPress={stopRecording}
+                    />
+                  ) : (
+                    <AccessibleButton
+                      title="开始录音"
+                      variant="secondary"
+                      className="flex-1 border border-slate-200 bg-white"
+                      onPress={startRecording}
+                    />
+                  )}
+                </View>
+              </View>
+
+              {recording ? (
+                <View className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+                  <Text className="text-sm font-semibold text-cyan-800">录音中</Text>
+                  <Text className="mt-1 text-xs text-cyan-700">时长 {formatSeconds(recordingSeconds * 1000)}</Text>
+                </View>
+              ) : null}
             </GlassCard>
           </MotiView>
 
           <MotiView
             from={{ opacity: 0, translateY: 22 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 380, delay: 90 }}
+            transition={{ type: "timing", duration: 340, delay: 100 }}
           >
-            <GlassCard contentClassName="p-6">
-              <AccessibleInput
-                label="求助内容"
-                placeholder="例如：请帮我识别药盒上的用法与剂量"
-                value={text}
-                onChangeText={setText}
-                multiline
-                numberOfLines={5}
-                labelClassName="text-slate-100"
-                inputClassName="min-h-[120px] bg-white/95 text-slate-950"
-                textAlignVertical="top"
-              />
-
-              <View className="mt-2 gap-3">
-                <AccessibleButton title="从相册选择图片" variant="secondary" onPress={pickImages} />
-                <AccessibleButton title="拍照上传" variant="secondary" onPress={captureImage} />
-                <AccessibleButton title="选择视频" variant="secondary" onPress={pickVideo} />
-                {recording ? (
-                  <AccessibleButton title="停止录音" variant="danger" onPress={stopRecording} />
-                ) : (
-                  <AccessibleButton title="开始录音" variant="secondary" onPress={startRecording} />
-                )}
-              </View>
-            </GlassCard>
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 26 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 420, delay: 130 }}
-          >
-            <GlassCard contentClassName="p-5">
-              <Text className="text-accessible-sm font-semibold text-slate-100">已选择内容</Text>
+            <GlassCard tone="light" className="border-slate-200/80" contentClassName="p-5">
+              <Text className="text-accessible-base font-semibold text-slate-900">已添加素材</Text>
 
               {images.length > 0 ? (
                 <View className="mt-3 flex-row flex-wrap gap-2">
@@ -406,10 +474,8 @@ export default function SeekerCreateScreen() {
                     <View key={item.uri} className="relative">
                       <Image source={{ uri: item.uri }} className="h-20 w-20 rounded-xl" />
                       <Pressable
-                        onPress={() =>
-                          setImages((prev) => prev.filter((entry) => entry.uri !== item.uri))
-                        }
-                        className="absolute -right-1 -top-1 rounded-full bg-slate-950/70 px-1.5 py-0.5"
+                        onPress={() => setImages((prev) => prev.filter((entry) => entry.uri !== item.uri))}
+                        className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-slate-900/70"
                       >
                         <Text className="text-xs text-white">×</Text>
                       </Pressable>
@@ -423,24 +489,33 @@ export default function SeekerCreateScreen() {
                   {videos.map((item) => (
                     <View
                       key={item.uri}
-                      className="rounded-xl border border-white/20 bg-white/10 px-3 py-2"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2"
                     >
-                      <Text className="text-sm text-slate-100">视频: {item.fileName}</Text>
+                      <Text className="text-sm text-slate-700">视频：{item.fileName}</Text>
                     </View>
                   ))}
                 </View>
               ) : null}
 
               {audioFile ? (
-                <View className="mt-3 rounded-xl border border-cyan-300/40 bg-cyan-200/15 px-3 py-2">
-                  <Text className="text-sm font-medium text-cyan-100">
-                    语音已录制 · 时长 {formatSeconds(audioDuration)}
-                  </Text>
+                <View className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-3">
+                  <Text className="text-sm font-semibold text-cyan-800">语音已录制</Text>
+                  <Text className="mt-1 text-xs text-cyan-700">时长 {formatSeconds(audioDuration)}</Text>
+                  <View className="mt-2 flex-row items-end gap-1">
+                    {[10, 16, 12, 18, 14, 17, 11, 15].map((height, index) => (
+                      <View
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={`${height}-${index}`}
+                        className="w-1 rounded-full bg-cyan-500"
+                        style={{ height }}
+                      />
+                    ))}
+                  </View>
                 </View>
               ) : null}
 
               {!images.length && !videos.length && !audioFile ? (
-                <Text className="mt-3 text-sm text-slate-300">尚未添加媒体文件。</Text>
+                <Text className="mt-3 text-sm text-slate-500">还没有添加素材，建议至少补充一段语音或一张图片。</Text>
               ) : null}
             </GlassCard>
           </MotiView>
@@ -455,6 +530,7 @@ export default function SeekerCreateScreen() {
             <AccessibleButton
               title="返回大厅"
               variant="ghost"
+              className="border border-slate-200 bg-white/90"
               onPress={() => router.replace("/(seeker)/hall")}
             />
           </View>

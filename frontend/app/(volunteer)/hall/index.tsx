@@ -222,6 +222,12 @@ export default function VolunteerHallScreen() {
                           <AttachmentAudioPlayer
                             endpoint={voiceAttachments[0].file_url}
                             label="语音内容"
+                            speakerName="求助者"
+                            subtitle={new Date(item.created_at).toLocaleString("zh-CN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            badge="voice"
                             compact
                           />
                         </View>
