@@ -1,0 +1,65 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "task.allowAutomaticTasks": "on"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "dev:frontend",
+        "type": "shell",
+        "command": "cd frontend && pnpm start",
+        "runOptions": {
+          "runOn": "folderOpen"
+        },
+        "options": {
+          "shell": {
+            "executable": "cmd.exe",
+            "args": [
+              "/d",
+              "/k"
+            ]
+          }
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "group": "seeforme-dev",
+          "focus": false,
+          "clear": false
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "dev:backend",
+        "type": "shell",
+        "command": "cd backend && uv run main.py",
+        "runOptions": {
+          "runOn": "folderOpen"
+        },
+        "options": {
+          "shell": {
+            "executable": "cmd.exe",
+            "args": [
+              "/d",
+              "/k"
+            ]
+          }
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "group": "seeforme-dev",
+          "focus": false,
+          "clear": false
+        },
+        "problemMatcher": []
+      }
+    ]
+  }
+}

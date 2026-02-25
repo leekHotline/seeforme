@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import shutil
 from typing import AsyncGenerator
 
 import pytest
@@ -9,6 +10,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.core.db import Base, get_db
 
 # Import ALL models so Base.metadata knows about every table BEFORE create_all
@@ -23,6 +25,7 @@ import app.modules.moderation.models  # noqa: F401
 # Use a test-specific SQLite file
 TEST_DB_PATH = os.path.join(os.path.dirname(__file__), "test.db")
 TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
+TEST_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "test_uploads")
 
 
 @pytest.fixture(scope="session")
@@ -74,6 +77,10 @@ def _build_app():
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Provide an async HTTP client with a fresh DB for each test."""
+    previous_upload_dir = settings.UPLOAD_DIR
+    settings.UPLOAD_DIR = TEST_UPLOAD_DIR
+    shutil.rmtree(TEST_UPLOAD_DIR, ignore_errors=True)
+
     # Clean up any leftover test db
     try:
         os.remove(TEST_DB_PATH)
@@ -82,36 +89,42 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 
-    # Create all tables fresh (models are already imported above)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async def _override_get_db():
-        async with session_factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    test_app = _build_app()
-    test_app.dependency_overrides[get_db] = _override_get_db
-
-    transport = ASGITransport(app=test_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    test_app.dependency_overrides.clear()
-
-    # Clean up
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
-
     try:
-        os.remove(TEST_DB_PATH)
-    except OSError:
-        pass
+        # Create all tables fresh (models are already imported above)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+
+        async def _override_get_db():
+            async with session_factory() as session:
+                try:
+                    yield session
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
+
+        test_app = _build_app()
+        test_app.dependency_overrides[get_db] = _override_get_db
+
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
+
+        test_app.dependency_overrides.clear()
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+    finally:
+        await engine.dispose()
+        settings.UPLOAD_DIR = previous_upload_dir
+        shutil.rmtree(TEST_UPLOAD_DIR, ignore_errors=True)
+        try:
+            os.remove(TEST_DB_PATH)
+        except OSError:
+            pass

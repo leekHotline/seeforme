@@ -37,9 +37,11 @@ class Settings(BaseSettings):
         "audio/mp4",
         "audio/mpeg",
         "audio/wav",
+        "audio/x-wav",
         "audio/x-m4a",
         "audio/m4a",
         "audio/aac",
+        "audio/webm",
     ]
     MAX_VIDEO_SIZE: int = 50 * 1024 * 1024  # 50MB
     ALLOWED_VIDEO_TYPES: list[str] = ["video/mp4", "video/quicktime", "video/webm"]

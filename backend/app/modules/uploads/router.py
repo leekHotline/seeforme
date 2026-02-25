@@ -1,5 +1,3 @@
-"""Uploads API routes."""
-
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -45,10 +43,12 @@ async def upload_file_content(
     if record.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Cannot upload content for this file")
 
+    detected_mime_type: str | None = None
     # Enforce coarse category consistency while tolerating client MIME variations
     # (e.g. iOS can send `audio/m4a`, `image/jpg`, or generic values).
     if content.content_type:
-        normalized = content.content_type.split(";")[0].strip().lower()
+        normalized = service.normalize_mime_type(content.content_type)
+        detected_mime_type = normalized
         actual_category = service.classify_mime_type(normalized)
         if actual_category is None:
             if normalized.startswith("image/"):
@@ -73,6 +73,7 @@ async def upload_file_content(
             record=record,
             uploaded_filename=content.filename,
             file_bytes=file_bytes,
+            detected_mime_type=detected_mime_type,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
