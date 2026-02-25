@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
+from app.modules.uploads.service import build_content_url
 
 
 def _utcnow() -> datetime:
@@ -41,3 +42,8 @@ class RequestAttachment(Base):
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)
 
     request: Mapped["HelpRequest"] = relationship(back_populates="attachments")
+
+    @property
+    def file_url(self) -> str:
+        """Public API path for fetching the attachment content."""
+        return build_content_url(self.file_id)

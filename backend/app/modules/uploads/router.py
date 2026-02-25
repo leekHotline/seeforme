@@ -1,6 +1,9 @@
 """Uploads API routes."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -26,3 +29,76 @@ async def presign_upload(
         raise HTTPException(status_code=400, detail=str(e))
 
     return schemas.PresignResponse(**result)
+
+
+@router.put("/{file_id}/content", response_model=schemas.UploadContentResponse)
+async def upload_file_content(
+    file_id: str,
+    content: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> schemas.UploadContentResponse:
+    """Upload actual file bytes for a presigned file ID."""
+    record = await service.get_uploaded_file(db, file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Upload record not found")
+    if record.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot upload content for this file")
+
+    # Enforce coarse category consistency while tolerating client MIME variations
+    # (e.g. iOS can send `audio/m4a`, `image/jpg`, or generic values).
+    if content.content_type:
+        normalized = content.content_type.split(";")[0].strip().lower()
+        actual_category = service.classify_mime_type(normalized)
+        if actual_category is None:
+            if normalized.startswith("image/"):
+                actual_category = "image"
+            elif normalized.startswith("audio/"):
+                actual_category = "voice"
+            elif normalized.startswith("video/"):
+                actual_category = "video"
+        if actual_category and actual_category != record.category:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"MIME type mismatch: expected {record.mime_type} "
+                    f"({record.category}), got {content.content_type}"
+                ),
+            )
+
+    try:
+        file_bytes = await content.read()
+        result = await service.save_upload_content(
+            db,
+            record=record,
+            uploaded_filename=content.filename,
+            file_bytes=file_bytes,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return schemas.UploadContentResponse(**result)
+
+
+@router.get("/{file_id}/content")
+async def get_file_content(
+    file_id: str,
+    _current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """Read uploaded file content by file ID."""
+    record = await service.get_uploaded_file(db, file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Upload record not found")
+
+    try:
+        file_path = service.get_upload_content_path(record)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Uploaded content is not available")
+
+    filename = record.filename or file_path.name
+    return FileResponse(
+        path=file_path,
+        media_type=record.mime_type,
+        filename=filename,
+    )

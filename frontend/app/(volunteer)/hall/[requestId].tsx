@@ -8,10 +8,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import AccessibleButton from "@/components/AccessibleButton";
+import AttachmentAudioPlayer from "@/components/AttachmentAudioPlayer";
 import AccessibleInput from "@/components/AccessibleInput";
 import FeedbackModal from "@/components/FeedbackModal";
 import GlassBackground from "@/components/GlassBackground";
 import GlassCard from "@/components/GlassCard";
+import SecureImage from "@/components/SecureImage";
 import StatusBadge from "@/components/StatusBadge";
 import { useAnnounce, useHaptic } from "@/lib/accessibility";
 import { api, ApiError } from "@/lib/api";
@@ -189,6 +191,22 @@ export default function VolunteerRequestDetail() {
 
   const canClaim = request.status === "open";
   const canReply = request.status === "claimed" || request.status === "replied";
+  const imageAttachments = (request.attachments || []).filter(
+    (media) => media.file_type === "image" && media.file_url
+  );
+  const voiceAttachments = (request.attachments || []).filter(
+    (media) => media.file_type === "voice" && media.file_url
+  );
+  const mediaTypes = Array.from(
+    new Set((request.attachments || []).map((media) => media.file_type))
+  );
+  if (
+    mediaTypes.length === 0 &&
+    request.voice_file_id &&
+    request.voice_file_id !== "text-only-placeholder"
+  ) {
+    mediaTypes.push("voice");
+  }
 
   return (
     <GlassBackground>
@@ -204,15 +222,37 @@ export default function VolunteerRequestDetail() {
           <Text className="text-accessible-sm leading-7 text-slate-100">
             {request.transcribed_text || request.raw_text || "（语音求助）"}
           </Text>
+
+          {imageAttachments.length > 0 ? (
+            <View className="mt-3 gap-2">
+              {imageAttachments.map((media) =>
+                media.file_url ? (
+                  <SecureImage
+                    key={media.id}
+                    endpoint={media.file_url}
+                    className="h-40 w-full rounded-2xl"
+                  />
+                ) : null
+              )}
+            </View>
+          ) : null}
+
+          {voiceAttachments.length > 0 ? (
+            <View className="mt-3 gap-2">
+              {voiceAttachments.map((media, index) =>
+                media.file_url ? (
+                  <AttachmentAudioPlayer
+                    key={media.id}
+                    endpoint={media.file_url}
+                    label={`语音 ${index + 1}`}
+                  />
+                ) : null
+              )}
+            </View>
+          ) : null}
+
           <View className="mt-3 flex-row flex-wrap gap-2">
-            {Array.from(
-              new Set(
-                [
-                  ...(request.attachments || []).map((media) => media.file_type),
-                  ...(request.voice_file_id ? ["voice"] : []),
-                ]
-              )
-            ).map((type) => (
+            {mediaTypes.map((type) => (
               <View key={type} className="rounded-full bg-white/15 px-3 py-1">
                 <Text className="text-xs font-semibold text-slate-100">
                   {type === "image" ? "图文" : type === "video" ? "视频" : "语音"}

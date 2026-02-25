@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Audio } from "expo-av";
@@ -18,7 +18,11 @@ import GlassCard from "@/components/GlassCard";
 import { useAnnounce, useHaptic } from "@/lib/accessibility";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { HelpRequestCreate, UploadPresignResponse } from "@/lib/types";
+import type {
+  HelpRequestCreate,
+  UploadContentResponse,
+  UploadPresignResponse,
+} from "@/lib/types";
 
 interface ModalState {
   visible: boolean;
@@ -236,7 +240,22 @@ export default function SeekerCreateScreen() {
       mime_type: media.mimeType,
       size: media.size,
     });
-    return result.file_id;
+
+    const formData = new FormData();
+    if (Platform.OS === "web") {
+      const localResponse = await fetch(media.uri);
+      const blob = await localResponse.blob();
+      formData.append("content", blob, media.fileName);
+    } else {
+      formData.append("content", {
+        uri: media.uri,
+        name: media.fileName,
+        type: media.mimeType,
+      } as unknown as Blob);
+    }
+
+    const uploaded = await api.put<UploadContentResponse>(result.upload_url, formData);
+    return uploaded.file_id;
   };
 
   const handleSubmit = async () => {

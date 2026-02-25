@@ -15,9 +15,11 @@ import Animated, {
 } from "react-native-reanimated";
 
 import AccessibleButton from "@/components/AccessibleButton";
+import AttachmentAudioPlayer from "@/components/AttachmentAudioPlayer";
 import FeedbackModal from "@/components/FeedbackModal";
 import GlassBackground from "@/components/GlassBackground";
 import GlassCard from "@/components/GlassCard";
+import SecureImage from "@/components/SecureImage";
 import ShowcaseMediaCard from "@/components/ShowcaseMediaCard";
 import StaggerItem from "@/components/StaggerItem";
 import StatusBadge from "@/components/StatusBadge";
@@ -174,51 +176,81 @@ export default function SeekerHallScreen() {
               </GlassCard>
             </StaggerItem>
           ) : (
-            requests.map((item, index) => (
-              <StaggerItem key={`${item.id}-${refreshSeed}`} index={index + 5}>
-                <Pressable onPress={() => openDetail(item.id)} accessibilityRole="button">
-                  <GlassCard tone="light" contentClassName="p-5">
-                    <View className="mb-3 flex-row items-center justify-between">
-                      <StatusBadge status={item.status} />
-                      <Text className="text-sm text-slate-500">
-                        {new Date(item.created_at).toLocaleString("zh-CN", {
-                          month: "numeric",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+            requests.map((item, index) => {
+              const imageAttachments = (item.attachments || []).filter(
+                (media) => media.file_type === "image" && media.file_url
+              );
+              const voiceAttachments = (item.attachments || []).filter(
+                (media) => media.file_type === "voice" && media.file_url
+              );
+              const mediaTypes = Array.from(
+                new Set((item.attachments || []).map((media) => media.file_type))
+              );
+              if (
+                mediaTypes.length === 0 &&
+                item.voice_file_id &&
+                item.voice_file_id !== "text-only-placeholder"
+              ) {
+                mediaTypes.push("voice");
+              }
+
+              return (
+                <StaggerItem key={`${item.id}-${refreshSeed}`} index={index + 5}>
+                  <Pressable onPress={() => openDetail(item.id)} accessibilityRole="button">
+                    <GlassCard tone="light" contentClassName="p-5">
+                      <View className="mb-3 flex-row items-center justify-between">
+                        <StatusBadge status={item.status} />
+                        <Text className="text-sm text-slate-500">
+                          {new Date(item.created_at).toLocaleString("zh-CN", {
+                            month: "numeric",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Text>
+                      </View>
+                      <Text className="text-accessible-sm leading-7 text-slate-700" numberOfLines={3}>
+                        {item.transcribed_text || item.raw_text || "语音求助"}
                       </Text>
-                    </View>
-                    <Text className="text-accessible-sm leading-7 text-slate-700" numberOfLines={3}>
-                      {item.transcribed_text || item.raw_text || "语音求助"}
-                    </Text>
-                    <View className="mt-3 flex-row flex-wrap gap-2">
-                      {Array.from(
-                        new Set(
-                          [
-                            ...(item.attachments || []).map((media) => media.file_type),
-                            ...(item.voice_file_id ? ["voice"] : []),
-                          ]
-                        )
-                      ).map((type) => (
-                        <View
-                          key={`${item.id}-${type}`}
-                          className="rounded-full bg-slate-200 px-3 py-1"
-                        >
-                          <Text className="text-xs font-semibold text-slate-700">
-                            {type === "image"
-                              ? "图文"
-                              : type === "video"
-                                ? "视频"
-                                : "语音"}
-                          </Text>
+
+                      {imageAttachments[0]?.file_url ? (
+                        <SecureImage
+                          endpoint={imageAttachments[0].file_url}
+                          className="mt-3 h-36 w-full rounded-2xl"
+                        />
+                      ) : null}
+
+                      {voiceAttachments[0]?.file_url ? (
+                        <View className="mt-3">
+                          <AttachmentAudioPlayer
+                            endpoint={voiceAttachments[0].file_url}
+                            label="语音内容"
+                            compact
+                          />
                         </View>
-                      ))}
-                    </View>
-                  </GlassCard>
-                </Pressable>
-              </StaggerItem>
-            ))
+                      ) : null}
+
+                      <View className="mt-3 flex-row flex-wrap gap-2">
+                        {mediaTypes.map((type) => (
+                          <View
+                            key={`${item.id}-${type}`}
+                            className="rounded-full bg-slate-200 px-3 py-1"
+                          >
+                            <Text className="text-xs font-semibold text-slate-700">
+                              {type === "image"
+                                ? "图文"
+                                : type === "video"
+                                  ? "视频"
+                                  : "语音"}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </GlassCard>
+                  </Pressable>
+                </StaggerItem>
+              );
+            })
           )}
         </Animated.ScrollView>
       </SafeAreaView>

@@ -69,6 +69,7 @@ export interface RequestAttachment {
   id: string;
   file_id: string;
   file_type: "image" | "voice" | "video";
+  file_url?: string;
 }
 
 export interface HelpRequest {
@@ -140,4 +141,12 @@ export interface UploadPresignResponse {
   file_id: string;
   upload_url: string;
   category: "image" | "voice" | "video";
+}
+
+export interface UploadContentResponse {
+  file_id: string;
+  file_url: string;
+  category: "image" | "voice" | "video";
+  mime_type: string;
+  size: number;
 }

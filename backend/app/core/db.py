@@ -155,6 +155,10 @@ async def _ensure_schema_compatibility(conn) -> None:
                 "ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'image'"
             )
         )
+    if "storage_path" not in upload_columns_after:
+        await conn.execute(
+            text("ALTER TABLE uploaded_files ADD COLUMN storage_path VARCHAR(500)")
+        )
 
     final_upload_columns = await _table_columns("uploaded_files")
     if upload_columns_before != final_upload_columns:

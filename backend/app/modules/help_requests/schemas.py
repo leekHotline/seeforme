@@ -36,6 +36,7 @@ class RequestAttachmentResponse(BaseModel):
     id: str
     file_id: str
     file_type: str
+    file_url: str
 
     model_config = {"from_attributes": True}
 

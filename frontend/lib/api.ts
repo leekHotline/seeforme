@@ -47,10 +47,12 @@ async function request<T = unknown>(
 ): Promise<T> {
   const { method = "GET", body, headers = {}, auth = true } = options;
 
-  const finalHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...headers,
-  };
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+  const finalHeaders: Record<string, string> = { ...headers };
+  if (!isFormData && body !== undefined && !finalHeaders["Content-Type"]) {
+    finalHeaders["Content-Type"] = "application/json";
+  }
 
   if (auth) {
     const token = await getAccessToken();
@@ -65,10 +67,10 @@ async function request<T = unknown>(
   };
 
   if (body !== undefined) {
-    config.body = JSON.stringify(body);
+    config.body = isFormData ? body : JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  const response = await fetch(buildApiUrl(endpoint), config);
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -80,6 +82,14 @@ async function request<T = unknown>(
   }
 
   return response.json();
+}
+
+function buildApiUrl(endpoint: string): string {
+  if (/^https?:\/\//i.test(endpoint)) {
+    return endpoint;
+  }
+  const normalized = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${API_BASE_URL}${normalized}`;
 }
 
 /** Typed API methods */
@@ -100,4 +110,4 @@ export const api = {
     request<T>(endpoint, { method: "DELETE", auth }),
 };
 
-export { ApiError, API_BASE_URL };
+export { ApiError, API_BASE_URL, buildApiUrl };

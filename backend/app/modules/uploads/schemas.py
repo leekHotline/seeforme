@@ -15,3 +15,13 @@ class PresignResponse(BaseModel):
     file_id: str
     upload_url: str
     category: str
+
+
+class UploadContentResponse(BaseModel):
+    """Uploaded file metadata after content is stored."""
+
+    file_id: str
+    file_url: str
+    category: str
+    mime_type: str
+    size: int

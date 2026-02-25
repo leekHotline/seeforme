@@ -32,6 +32,7 @@ async def test_presign_valid_image(client: AsyncClient):
     data = resp.json()
     assert data["file_id"]
     assert data["upload_url"]
+    assert data["upload_url"].endswith("/content")
 
 
 @pytest.mark.asyncio
@@ -105,3 +106,92 @@ async def test_presign_video_too_large(client: AsyncClient):
     }, headers=_auth(token))
 
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_upload_and_read_content(client: AsyncClient):
+    """Upload file bytes after presign, then fetch file content."""
+    token = await _register_and_get_token(client, "upload7@test.com", "seeker")
+
+    presign_resp = await client.post(
+        "/api/v1/uploads/presign",
+        json={
+            "filename": "photo.jpg",
+            "mime_type": "image/jpeg",
+            "size": 1024,
+        },
+        headers=_auth(token),
+    )
+    assert presign_resp.status_code == 200
+    payload = presign_resp.json()
+    file_id = payload["file_id"]
+
+    content_bytes = b"fake-jpeg-content"
+    upload_resp = await client.put(
+        f"/api/v1/uploads/{file_id}/content",
+        files={"content": ("photo.jpg", content_bytes, "image/jpeg")},
+        headers=_auth(token),
+    )
+    assert upload_resp.status_code == 200
+    uploaded_data = upload_resp.json()
+    assert uploaded_data["file_id"] == file_id
+    assert uploaded_data["size"] == len(content_bytes)
+    assert uploaded_data["file_url"] == f"/uploads/{file_id}/content"
+
+    read_resp = await client.get(
+        f"/api/v1/uploads/{file_id}/content",
+        headers=_auth(token),
+    )
+    assert read_resp.status_code == 200
+    assert read_resp.content == content_bytes
+    assert read_resp.headers["content-type"].startswith("image/jpeg")
+
+
+@pytest.mark.asyncio
+async def test_upload_content_rejects_non_owner(client: AsyncClient):
+    """Only the creator of presign record can upload file content."""
+    owner_token = await _register_and_get_token(client, "upload8@test.com", "seeker")
+    other_token = await _register_and_get_token(client, "upload9@test.com", "seeker")
+
+    presign_resp = await client.post(
+        "/api/v1/uploads/presign",
+        json={
+            "filename": "voice.m4a",
+            "mime_type": "audio/x-m4a",
+            "size": 1024,
+        },
+        headers=_auth(owner_token),
+    )
+    file_id = presign_resp.json()["file_id"]
+
+    upload_resp = await client.put(
+        f"/api/v1/uploads/{file_id}/content",
+        files={"content": ("voice.m4a", b"fake-audio", "audio/x-m4a")},
+        headers=_auth(other_token),
+    )
+    assert upload_resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_upload_content_accepts_ios_mime_alias(client: AsyncClient):
+    """iOS-style MIME aliases should be accepted when category matches."""
+    token = await _register_and_get_token(client, "upload10@test.com", "seeker")
+
+    presign_resp = await client.post(
+        "/api/v1/uploads/presign",
+        json={
+            "filename": "voice.m4a",
+            "mime_type": "audio/x-m4a",
+            "size": 1024,
+        },
+        headers=_auth(token),
+    )
+    assert presign_resp.status_code == 200
+    file_id = presign_resp.json()["file_id"]
+
+    upload_resp = await client.put(
+        f"/api/v1/uploads/{file_id}/content",
+        files={"content": ("voice.m4a", b"fake-audio", "audio/m4a")},
+        headers=_auth(token),
+    )
+    assert upload_resp.status_code == 200

@@ -167,3 +167,25 @@ async def test_seeker_can_list_own_requests(client: AsyncClient):
     assert payload["total"] >= 1
     assert any(item["id"] == owner_request_id for item in payload["items"])
     assert all(item["seeker_id"] == create_resp.json()["seeker_id"] for item in payload["items"])
+
+
+@pytest.mark.asyncio
+async def test_request_attachments_include_file_url(client: AsyncClient):
+    """Help request attachment response should contain file_url for rendering."""
+    token = await _register_and_get_token(client, "attachment_url@test.com", "seeker")
+
+    create_resp = await client.post(
+        "/api/v1/help-requests",
+        json={
+            "text": "Need attachment rendering",
+            "mode": "hall",
+            "image_file_ids": ["img-file-1"],
+            "voice_file_id": "voice-file-1",
+            "voice_file_ids": ["voice-file-1"],
+        },
+        headers=_auth(token),
+    )
+    assert create_resp.status_code == 201
+    data = create_resp.json()
+    assert any(att["file_url"] == "/uploads/img-file-1/content" for att in data["attachments"])
+    assert any(att["file_url"] == "/uploads/voice-file-1/content" for att in data["attachments"])
