@@ -59,6 +59,8 @@ function buildMedia(filenamePrefix: string, uri: string, mimeType: string, size?
     ? "png"
     : mimeType.includes("webp")
       ? "webp"
+      : mimeType.includes("webm")
+        ? "webm"
       : mimeType.includes("quicktime")
         ? "mov"
         : mimeType.includes("mp4")
@@ -76,6 +78,36 @@ function buildMedia(filenamePrefix: string, uri: string, mimeType: string, size?
     size: size ?? 512 * 1024,
     fileName: `${filenamePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${extension}`,
   };
+}
+
+function normalizeUploadMimeType(mimeType: string): string {
+  const normalized = mimeType.split(";")[0].trim().toLowerCase();
+  if (normalized === "audio/m4a") return "audio/x-m4a";
+  if (normalized === "image/jpg") return "image/jpeg";
+  if (normalized === "audio/x-wav") return "audio/wav";
+  return normalized;
+}
+
+function extensionFromMimeType(mimeType: string): string {
+  const normalized = normalizeUploadMimeType(mimeType);
+  if (normalized.includes("png")) return "png";
+  if (normalized.includes("webp")) return "webp";
+  if (normalized.includes("webm")) return "webm";
+  if (normalized.includes("quicktime")) return "mov";
+  if (normalized.includes("mp4")) return "mp4";
+  if (normalized.includes("mpeg")) return "mp3";
+  if (normalized.includes("wav")) return "wav";
+  if (normalized.includes("m4a")) return "m4a";
+  if (normalized.includes("jpeg")) return "jpg";
+  if (normalized.includes("jpg")) return "jpg";
+  return "bin";
+}
+
+function ensureFileNameExtension(fileName: string, mimeType: string): string {
+  const extension = extensionFromMimeType(mimeType);
+  const lastDot = fileName.lastIndexOf(".");
+  const stem = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+  return `${stem}.${extension}`;
 }
 
 export default function SeekerCreateScreen() {
@@ -226,8 +258,9 @@ export default function SeekerCreateScreen() {
         "durationMillis" in status && typeof status.durationMillis === "number"
           ? status.durationMillis
           : 0;
+      const recordedMimeType = Platform.OS === "web" ? "audio/webm" : "audio/mp4";
       setAudioFile(
-        buildMedia("voice", uri, "audio/x-m4a")
+        buildMedia("voice", uri, recordedMimeType)
       );
       setAudioDuration(durationMillis);
       trigger("success");
@@ -235,24 +268,33 @@ export default function SeekerCreateScreen() {
   };
 
   const createUploadRecord = async (media: PickedMedia) => {
-    const result = await api.post<UploadPresignResponse>("/uploads/presign", {
-      filename: media.fileName,
-      mime_type: media.mimeType,
-      size: media.size,
-    });
-
     const formData = new FormData();
+    let uploadMimeType = normalizeUploadMimeType(media.mimeType);
+    let uploadFileName = ensureFileNameExtension(media.fileName, uploadMimeType);
+    let uploadSize = media.size;
+
     if (Platform.OS === "web") {
       const localResponse = await fetch(media.uri);
       const blob = await localResponse.blob();
-      formData.append("content", blob, media.fileName);
+      if (blob.type) {
+        uploadMimeType = normalizeUploadMimeType(blob.type);
+        uploadFileName = ensureFileNameExtension(uploadFileName, uploadMimeType);
+      }
+      uploadSize = blob.size;
+      formData.append("content", blob, uploadFileName);
     } else {
       formData.append("content", {
         uri: media.uri,
-        name: media.fileName,
-        type: media.mimeType,
+        name: uploadFileName,
+        type: uploadMimeType,
       } as unknown as Blob);
     }
+
+    const result = await api.post<UploadPresignResponse>("/uploads/presign", {
+      filename: uploadFileName,
+      mime_type: uploadMimeType,
+      size: uploadSize,
+    });
 
     const uploaded = await api.put<UploadContentResponse>(result.upload_url, formData);
     return uploaded.file_id;

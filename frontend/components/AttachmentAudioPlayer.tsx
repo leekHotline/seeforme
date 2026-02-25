@@ -23,6 +23,7 @@ export default function AttachmentAudioPlayer({
   compact = false,
 }: AttachmentAudioPlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
+  const webAudioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -39,6 +40,14 @@ export default function AttachmentAudioPlayer({
         // Ignore cleanup errors.
       }
     }
+
+    const webAudio = webAudioRef.current;
+    webAudioRef.current = null;
+    if (webAudio) {
+      webAudio.pause();
+      webAudio.src = "";
+    }
+
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
@@ -68,18 +77,6 @@ export default function AttachmentAudioPlayer({
     const token = await storage.getItem("access_token");
     const absoluteUrl = buildApiUrl(endpoint);
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-    if (Platform.OS === "web") {
-      const response = await fetch(absoluteUrl, { headers });
-      if (!response.ok) {
-        throw new Error(`Audio fetch failed: ${response.status}`);
-      }
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      objectUrlRef.current = objectUrl;
-      return { uri: objectUrl };
-    }
-
     return { uri: absoluteUrl, headers };
   }, [endpoint]);
 
@@ -97,10 +94,46 @@ export default function AttachmentAudioPlayer({
     return sound;
   }, [buildSource]);
 
+  const ensureWebAudio = useCallback(async (): Promise<HTMLAudioElement> => {
+    if (webAudioRef.current) {
+      return webAudioRef.current;
+    }
+
+    const token = await storage.getItem("access_token");
+    const absoluteUrl = buildApiUrl(endpoint);
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const response = await fetch(absoluteUrl, { headers });
+    if (!response.ok) {
+      throw new Error(`Audio fetch failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    objectUrlRef.current = objectUrl;
+
+    const audio = new window.Audio(objectUrl);
+    audio.preload = "auto";
+    audio.onended = () => setIsPlaying(false);
+    webAudioRef.current = audio;
+    return audio;
+  }, [endpoint]);
+
   const onToggle = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      if (Platform.OS === "web") {
+        const webAudio = await ensureWebAudio();
+        if (webAudio.paused) {
+          await webAudio.play();
+          setIsPlaying(true);
+        } else {
+          webAudio.pause();
+          setIsPlaying(false);
+        }
+        return;
+      }
+
       const sound = await ensureSound();
       const status = await sound.getStatusAsync();
       if (!status.isLoaded) {
@@ -112,12 +145,13 @@ export default function AttachmentAudioPlayer({
       } else {
         await sound.playAsync();
       }
-    } catch {
+    } catch (playbackError) {
+      console.error("Attachment audio playback failed", playbackError);
       setError("语音加载失败");
     } finally {
       setLoading(false);
     }
-  }, [ensureSound]);
+  }, [ensureSound, ensureWebAudio]);
 
   const onPressPlay = useCallback(
     (event: GestureResponderEvent) => {

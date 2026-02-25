@@ -97,9 +97,14 @@ async def get_file_content(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Uploaded content is not available")
 
-    filename = record.filename or file_path.name
+    media_type = service.resolve_serving_mime_type(record, file_path)
+    if media_type != record.mime_type:
+        record.mime_type = media_type
+        await db.flush()
+
     return FileResponse(
         path=file_path,
-        media_type=record.mime_type,
-        filename=filename,
+        media_type=media_type,
+        filename=file_path.name,
+        content_disposition_type="inline",
     )

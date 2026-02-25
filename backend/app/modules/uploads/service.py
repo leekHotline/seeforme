@@ -110,6 +110,11 @@ def _date_folder(created_at: datetime | None) -> str:
     return timestamp.date().isoformat()
 
 
+def _user_folder(user_id: str) -> str:
+    """Return user-scoped storage folder."""
+    return f"user_{user_id}"
+
+
 def build_content_url(file_id: str) -> str:
     """Build API endpoint URL for reading upload content."""
     return f"/uploads/{file_id}/content"
@@ -170,6 +175,27 @@ def _resolve_storage_path(record: UploadedFile) -> Path:
     return ensure_upload_dir() / record.storage_path
 
 
+def resolve_serving_mime_type(record: UploadedFile, file_path: Path) -> str:
+    """Resolve MIME type for serving file content, with voice format sniffing."""
+    fallback = normalize_mime_type(record.mime_type)
+    if record.category != "voice":
+        return fallback
+
+    try:
+        with file_path.open("rb") as fp:
+            header = fp.read(16)
+    except OSError:
+        return fallback
+
+    if header.startswith(b"\x1A\x45\xDF\xA3"):
+        return "audio/webm"
+    if header.startswith(b"RIFF"):
+        return "audio/wav"
+    if len(header) >= 8 and header[4:8] == b"ftyp":
+        return "audio/mp4"
+    return fallback
+
+
 async def save_upload_content(
     db: AsyncSession,
     *,
@@ -200,7 +226,7 @@ async def save_upload_content(
     safe_name = _ensure_extension(source_name, extension)
     sha_prefix = hashlib.sha256(file_bytes).hexdigest()[:12]
     relative_path = (
-        Path(record.user_id)
+        Path(_user_folder(record.user_id))
         / _date_folder(record.created_at)
         / f"{record.id}-{sha_prefix}-{safe_name}"
     )

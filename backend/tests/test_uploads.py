@@ -249,6 +249,41 @@ async def test_upload_webm_updates_mime_and_storage_path(client: AsyncClient):
     stored_file = _find_uploaded_file(file_id)
     relative = stored_file.relative_to(Path(settings.UPLOAD_DIR))
     assert len(relative.parts) == 3
-    assert relative.parts[0] == user_id
+    assert relative.parts[0] == f"user_{user_id}"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", relative.parts[1])
     assert stored_file.suffix.lower() == ".webm"
+
+
+@pytest.mark.asyncio
+async def test_get_voice_content_sniffs_legacy_webm_mime(client: AsyncClient):
+    """Legacy mislabeled voice uploads should be served as audio/webm."""
+    token = await _register_and_get_token(client, "upload12@test.com", "seeker")
+
+    presign_resp = await client.post(
+        "/api/v1/uploads/presign",
+        json={
+            "filename": "voice.m4a",
+            "mime_type": "audio/x-m4a",
+            "size": 4096,
+        },
+        headers=_auth(token),
+    )
+    assert presign_resp.status_code == 200
+    file_id = presign_resp.json()["file_id"]
+
+    webm_bytes = bytes.fromhex("1A45DFA39F4286810142F7810142F281") + b"legacy-webm"
+    upload_resp = await client.put(
+        f"/api/v1/uploads/{file_id}/content",
+        files={"content": ("voice.m4a", webm_bytes, "audio/x-m4a")},
+        headers=_auth(token),
+    )
+    assert upload_resp.status_code == 200
+    assert upload_resp.json()["mime_type"] == "audio/x-m4a"
+
+    read_resp = await client.get(
+        f"/api/v1/uploads/{file_id}/content",
+        headers=_auth(token),
+    )
+    assert read_resp.status_code == 200
+    assert read_resp.content == webm_bytes
+    assert read_resp.headers["content-type"].startswith("audio/webm")
