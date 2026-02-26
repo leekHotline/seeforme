@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     MAX_VIDEO_SIZE: int = 50 * 1024 * 1024  # 50MB
     ALLOWED_VIDEO_TYPES: list[str] = ["video/mp4", "video/quicktime", "video/webm"]
 
+    # Anthropic Claude
+    ANTHROPIC_API_KEY: str = ""
+    CLAUDE_MODEL: str = "claude-opus-4-5"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

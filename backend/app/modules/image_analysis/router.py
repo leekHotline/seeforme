@@ -18,5 +18,5 @@ async def describe_image(
     db: AsyncSession = Depends(get_db),
 ) -> schemas.ImageDescribeResponse:
     """Describe an image to help visually impaired users understand its content."""
-    result = await service.describe_image(payload.image_file_id, payload.language)
+    result = await service.describe_image(db, payload.image_file_id, payload.language)
     return schemas.ImageDescribeResponse(**result)
