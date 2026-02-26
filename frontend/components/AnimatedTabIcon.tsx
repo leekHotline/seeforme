@@ -1,8 +1,7 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { MotiView } from "moti";
-import { Ionicons } from "@expo/vector-icons";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 
 export type TabIconName = "hall" | "create" | "messages" | "profile" | "tasks";
 
@@ -12,17 +11,82 @@ interface AnimatedTabIconProps {
   pulseSeed?: number;
 }
 
-const INACTIVE_COLOR = "#64748B";
+const INACTIVE_COLOR = "#D1D5DB";
 
-const ACTIVE_ICON_COLOR = "#ffffff";
+function IconShape({
+  name,
+  base,
+  accent,
+}: {
+  name: TabIconName;
+  base: string;
+  accent: string;
+}) {
+  if (name === "hall") {
+    return (
+      <>
+        <Path
+          d="M12 3L2.8 10.3C2.5 10.5 2.5 11 2.8 11.3C3 11.6 3.4 11.6 3.7 11.4L4.5 10.8V20.2C4.5 20.6 4.8 21 5.3 21H18.7C19.2 21 19.5 20.6 19.5 20.2V10.8L20.3 11.4C20.6 11.6 21 11.6 21.2 11.3C21.5 11 21.5 10.5 21.2 10.3L12 3Z"
+          fill={base}
+        />
+        <Rect x="10.6" y="15" width="2.8" height="6" rx="1" fill={accent} />
+      </>
+    );
+  }
 
-const iconMap: Record<TabIconName, { activeIcon: keyof typeof Ionicons.glyphMap; inactiveIcon: keyof typeof Ionicons.glyphMap }> = {
-  hall: { activeIcon: "home", inactiveIcon: "home-outline" },
-  create: { activeIcon: "add-circle", inactiveIcon: "add-circle-outline" },
-  messages: { activeIcon: "chatbubble-ellipses", inactiveIcon: "chatbubble-ellipses-outline" },
-  profile: { activeIcon: "person-circle", inactiveIcon: "person-circle-outline" },
-  tasks: { activeIcon: "checkmark-done-circle", inactiveIcon: "checkmark-done-circle-outline" },
-};
+  if (name === "create") {
+    return (
+      <>
+        <Rect x="3.5" y="3.5" width="17" height="17" rx="5" fill={base} />
+        <Rect x="11" y="7" width="2" height="10" rx="1" fill={accent} />
+        <Rect x="7" y="11" width="10" height="2" rx="1" fill={accent} />
+      </>
+    );
+  }
+
+  if (name === "messages") {
+    return (
+      <>
+        <Path
+          d="M4.4 5.5C4.4 4.95 4.85 4.5 5.4 4.5H18.6C19.15 4.5 19.6 4.95 19.6 5.5V15.4C19.6 15.95 19.15 16.4 18.6 16.4H11.9L7.7 19.4V16.4H5.4C4.85 16.4 4.4 15.95 4.4 15.4V5.5Z"
+          fill={base}
+        />
+        <Rect x="7.2" y="8.7" width="9.6" height="1.6" rx="0.8" fill={accent} />
+        <Rect x="7.2" y="11.9" width="6.2" height="1.6" rx="0.8" fill={accent} />
+      </>
+    );
+  }
+
+  if (name === "tasks") {
+    return (
+      <>
+        <Path
+          d="M7 4.2H17C18.1 4.2 19 5.1 19 6.2V20C19 21.1 18.1 22 17 22H7C5.9 22 5 21.1 5 20V6.2C5 5.1 5.9 4.2 7 4.2Z"
+          fill={base}
+        />
+        <Rect x="7.8" y="7.3" width="2.2" height="2.2" rx="0.7" fill={accent} />
+        <Rect x="7.8" y="11.2" width="2.2" height="2.2" rx="0.7" fill={accent} />
+        <Rect x="7.8" y="15.1" width="2.2" height="2.2" rx="0.7" fill={accent} />
+        <Rect x="11.4" y="7.8" width="5.8" height="1.3" rx="0.65" fill={accent} />
+        <Rect x="11.4" y="11.7" width="5.8" height="1.3" rx="0.65" fill={accent} />
+        <Rect x="11.4" y="15.6" width="5.8" height="1.3" rx="0.65" fill={accent} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Path
+        d="M12 4C14.43 4 16.4 5.97 16.4 8.4C16.4 10.83 14.43 12.8 12 12.8C9.57 12.8 7.6 10.83 7.6 8.4C7.6 5.97 9.57 4 12 4Z"
+        fill={base}
+      />
+      <Path
+        d="M5.3 19.8C6 16.8 8.7 14.8 12 14.8C15.3 14.8 18 16.8 18.7 19.8C18.8 20.2 18.5 20.6 18 20.6H6C5.5 20.6 5.2 20.2 5.3 19.8Z"
+        fill={base}
+      />
+    </>
+  );
+}
 
 export default function AnimatedTabIcon({
   name,
@@ -46,11 +110,12 @@ export default function AnimatedTabIcon({
   }, [pulseSeed]);
 
   const gradientId = useMemo(
-    () => `tab-grad-${name}-${Math.random().toString(36).slice(2, 8)}`,
+    () => `tab-gradient-${name}-${Math.random().toString(36).slice(2, 8)}`,
     [name]
   );
 
-  const iconName = focused ? iconMap[name].activeIcon : iconMap[name].inactiveIcon;
+  const base = focused ? `url(#${gradientId})` : INACTIVE_COLOR;
+  const accent = focused ? "#FFFFFF" : "#F8FAFC";
 
   return (
     <View style={styles.wrapper}>
@@ -58,43 +123,35 @@ export default function AnimatedTabIcon({
         <>
           <MotiView
             key={`${name}-wave-a-${pulseKey}`}
-            from={{ opacity: 0.55, scale: 0.3 }}
-            animate={{ opacity: 0, scale: 3.6 }}
-            transition={{ type: "timing", duration: 600 }}
+            from={{ opacity: 0.66, scale: 0.3 }}
+            animate={{ opacity: 0, scale: 3.7 }}
+            transition={{ type: "timing", duration: 640 }}
             style={styles.pulseWavePrimary}
           />
           <MotiView
             key={`${name}-wave-b-${pulseKey}`}
-            from={{ opacity: 0.42, scale: 0.25 }}
-            animate={{ opacity: 0, scale: 4.2 }}
-            transition={{ type: "timing", duration: 700, delay: 100 }}
+            from={{ opacity: 0.52, scale: 0.25 }}
+            animate={{ opacity: 0, scale: 4.3 }}
+            transition={{ type: "timing", duration: 720, delay: 110 }}
             style={styles.pulseWaveSecondary}
           />
         </>
       ) : null}
 
       <MotiView
-        animate={{ scale: focused ? 1.08 : 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 18 }}
+        animate={{ scale: focused ? 1.06 : 1 }}
+        transition={{ type: "timing", duration: 170 }}
       >
-        {focused ? (
-          <View style={styles.iconContainer}>
-            {/* Gradient background rectangle behind the white icon */}
-            <Svg width={28} height={28} style={StyleSheet.absoluteFillObject}>
-              <Defs>
-                <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0%" stopColor="#06b6d4" />
-                  <Stop offset="50%" stopColor="#3b82f6" />
-                  <Stop offset="100%" stopColor="#8b5cf6" />
-                </LinearGradient>
-              </Defs>
-              <Rect width="28" height="28" fill={`url(#${gradientId})`} />
-            </Svg>
-            <Ionicons name={iconName} size={28} color={ACTIVE_ICON_COLOR} style={styles.iconOverlay} />
-          </View>
-        ) : (
-          <Ionicons name={iconName} size={26} color={INACTIVE_COLOR} />
-        )}
+        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+          <Defs>
+            <LinearGradient id={gradientId} x1="2" y1="3" x2="22" y2="21">
+              <Stop offset="0%" stopColor="#06B6D4" />
+              <Stop offset="58%" stopColor="#3B82F6" />
+              <Stop offset="100%" stopColor="#A855F7" />
+            </LinearGradient>
+          </Defs>
+          <IconShape name={name} base={base} accent={accent} />
+        </Svg>
       </MotiView>
     </View>
   );
@@ -102,34 +159,33 @@ export default function AnimatedTabIcon({
 
 const styles = StyleSheet.create({
   wrapper: {
-    height: 40,
-    width: 40,
+    height: 38,
+    width: 38,
     alignItems: "center",
     justifyContent: "center",
-  },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderRadius: 4,
-  },
-  iconOverlay: {
-    position: "absolute",
   },
   pulseWavePrimary: {
     position: "absolute",
     width: 20,
     height: 20,
     borderRadius: 999,
-    backgroundColor: "rgba(6,182,212,0.40)",
+    backgroundColor: "rgba(14,165,233,0.34)",
+    shadowColor: "#0284C7",
+    shadowOpacity: 0.75,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 14,
+    elevation: 7,
   },
   pulseWaveSecondary: {
     position: "absolute",
     width: 18,
     height: 18,
     borderRadius: 999,
-    backgroundColor: "rgba(139,92,246,0.32)",
+    backgroundColor: "rgba(37,99,235,0.3)",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.62,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 13,
+    elevation: 6,
   },
 });

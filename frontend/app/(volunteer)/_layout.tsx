@@ -18,13 +18,12 @@ export default function VolunteerLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: "#0f172a" },
-        headerTintColor: "#f1f5f9",
-        headerTitleStyle: { fontWeight: "700", color: "#f1f5f9" },
+        headerStyle: { backgroundColor: "#FFFFFF" },
+        headerTintColor: "#0F172A",
+        headerTitleStyle: { fontWeight: "700", color: "#0F172A" },
         tabBarStyle: {
-          backgroundColor: "#0f172a",
-          borderTopColor: "rgba(255,255,255,0.08)",
-          borderTopWidth: 1,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#E2E8F0",
           minHeight: 76,
           paddingTop: 6,
           paddingBottom: 12,
@@ -40,8 +39,8 @@ export default function VolunteerLayout() {
         },
         tabBarLabelPosition: "below-icon",
         tabBarAllowFontScaling: false,
-        tabBarActiveTintColor: "#06b6d4",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: "#0F172A",
+        tabBarInactiveTintColor: "#9CA3AF",
         tabBarHideOnKeyboard: true,
       }}
     >
