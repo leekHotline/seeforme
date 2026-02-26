@@ -1,6 +1,7 @@
-﻿import React from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 
 export default function GlassBackground({
@@ -9,30 +10,68 @@ export default function GlassBackground({
   children: React.ReactNode;
 }) {
   return (
-    <View className="flex-1 bg-slate-50">
+    <View style={styles.root}>
+      <LinearGradient
+        colors={["#020617", "#0f172a", "#1e1b4b"]}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <MotiView
-          from={{ opacity: 0.2, scale: 0.86 }}
-          animate={{ opacity: 0.34, scale: 1.08 }}
-          transition={{ type: "timing", duration: 5200, loop: true }}
-          className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-sky-200/70"
+          from={{ opacity: 0.28, scale: 0.82 }}
+          animate={{ opacity: 0.52, scale: 1.14 }}
+          transition={{ type: "timing", duration: 5800, loop: true }}
+          style={styles.orbCyan}
         />
         <MotiView
-          from={{ opacity: 0.18, scale: 0.9 }}
-          animate={{ opacity: 0.3, scale: 1.04 }}
-          transition={{ type: "timing", duration: 6400, loop: true }}
-          className="absolute right-[-90px] top-40 h-80 w-80 rounded-full bg-rose-100/60"
+          from={{ opacity: 0.22, scale: 0.88 }}
+          animate={{ opacity: 0.42, scale: 1.10 }}
+          transition={{ type: "timing", duration: 7200, loop: true }}
+          style={styles.orbViolet}
         />
         <MotiView
-          from={{ opacity: 0.12, scale: 0.92 }}
-          animate={{ opacity: 0.24, scale: 1.06 }}
-          transition={{ type: "timing", duration: 7000, loop: true }}
-          className="absolute bottom-[-88px] left-16 h-72 w-72 rounded-full bg-teal-100/65"
+          from={{ opacity: 0.18, scale: 0.90 }}
+          animate={{ opacity: 0.36, scale: 1.08 }}
+          transition={{ type: "timing", duration: 6600, loop: true }}
+          style={styles.orbBlue}
         />
       </View>
 
-      <BlurView intensity={32} tint="light" style={StyleSheet.absoluteFillObject} />
-      <View className="flex-1 bg-white/72">{children}</View>
+      <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFillObject} />
+      <View style={styles.content}>{children}</View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#020617" },
+  content: { flex: 1 },
+  orbCyan: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: 999,
+    backgroundColor: "rgba(6,182,212,0.22)",
+    top: -80,
+    left: -80,
+  },
+  orbViolet: {
+    position: "absolute",
+    width: 340,
+    height: 340,
+    borderRadius: 999,
+    backgroundColor: "rgba(139,92,246,0.18)",
+    top: 200,
+    right: -100,
+  },
+  orbBlue: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 999,
+    backgroundColor: "rgba(59,130,246,0.20)",
+    bottom: -60,
+    left: 40,
+  },
+});
