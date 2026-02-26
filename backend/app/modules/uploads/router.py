@@ -43,12 +43,10 @@ async def upload_file_content(
     if record.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Cannot upload content for this file")
 
-    detected_mime_type: str | None = None
     # Enforce coarse category consistency while tolerating client MIME variations
     # (e.g. iOS can send `audio/m4a`, `image/jpg`, or generic values).
     if content.content_type:
-        normalized = service.normalize_mime_type(content.content_type)
-        detected_mime_type = normalized
+        normalized = content.content_type.split(";")[0].strip().lower()
         actual_category = service.classify_mime_type(normalized)
         if actual_category is None:
             if normalized.startswith("image/"):
@@ -73,7 +71,6 @@ async def upload_file_content(
             record=record,
             uploaded_filename=content.filename,
             file_bytes=file_bytes,
-            detected_mime_type=detected_mime_type,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -97,14 +94,9 @@ async def get_file_content(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Uploaded content is not available")
 
-    media_type = service.resolve_serving_mime_type(record, file_path)
-    if media_type != record.mime_type:
-        record.mime_type = media_type
-        await db.flush()
-
+    filename = record.filename or file_path.name
     return FileResponse(
         path=file_path,
-        media_type=media_type,
-        filename=file_path.name,
-        content_disposition_type="inline",
+        media_type=record.mime_type,
+        filename=filename,
     )

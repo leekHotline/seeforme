@@ -121,20 +121,22 @@ export default function AnimatedTabIcon({
     <View style={styles.wrapper}>
       {pulseKey > 0 ? (
         <>
+          <View pointerEvents="none" style={styles.waveLayer}>
           <MotiView
             key={`${name}-wave-a-${pulseKey}`}
-            from={{ opacity: 0.66, scale: 0.3 }}
-            animate={{ opacity: 0, scale: 3.7 }}
-            transition={{ type: "timing", duration: 640 }}
+            from={{ opacity: 0.8, scale: 0.25 }}
+            animate={{ opacity: 0, scale: 4.6 }}
+            transition={{ type: "timing", duration: 720 }}
             style={styles.pulseWavePrimary}
           />
           <MotiView
             key={`${name}-wave-b-${pulseKey}`}
-            from={{ opacity: 0.52, scale: 0.25 }}
-            animate={{ opacity: 0, scale: 4.3 }}
-            transition={{ type: "timing", duration: 720, delay: 110 }}
+            from={{ opacity: 0.68, scale: 0.22 }}
+            animate={{ opacity: 0, scale: 5.2 }}
+            transition={{ type: "timing", duration: 800, delay: 120 }}
             style={styles.pulseWaveSecondary}
           />
+          </View>
         </>
       ) : null}
 
@@ -159,33 +161,43 @@ export default function AnimatedTabIcon({
 
 const styles = StyleSheet.create({
   wrapper: {
-    height: 38,
-    width: 38,
+    height: 24,
+    width: 24,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
+    position: "relative",
+  },
+  waveLayer: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 96,
+    height: 96,
+    overflow: "visible",
   },
   pulseWavePrimary: {
     position: "absolute",
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     borderRadius: 999,
-    backgroundColor: "rgba(14,165,233,0.34)",
+    backgroundColor: "rgba(2,132,199,0.6)",
     shadowColor: "#0284C7",
-    shadowOpacity: 0.75,
+    shadowOpacity: 0.9,
     shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 14,
-    elevation: 7,
+    shadowRadius: 18,
+    elevation: 9,
   },
   pulseWaveSecondary: {
     position: "absolute",
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     borderRadius: 999,
-    backgroundColor: "rgba(37,99,235,0.3)",
+    backgroundColor: "rgba(37,99,235,0.5)",
     shadowColor: "#2563EB",
-    shadowOpacity: 0.62,
+    shadowOpacity: 0.78,
     shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 13,
-    elevation: 6,
+    shadowRadius: 16,
+    elevation: 8,
   },
 });

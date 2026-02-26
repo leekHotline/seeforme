@@ -6,6 +6,7 @@ import React, { useCallback, useState } from "react";
 import { Tabs } from "expo-router";
 
 import AnimatedTabIcon from "@/components/AnimatedTabIcon";
+import { sharedTabScreenOptions } from "@/lib/tab-bar-options";
 
 export default function SeekerLayout() {
   const [pulses, setPulses] = useState<Record<string, number>>({});
@@ -16,34 +17,7 @@ export default function SeekerLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: "#FFFFFF" },
-        headerTintColor: "#0F172A",
-        headerTitleStyle: { fontWeight: "700", color: "#0F172A" },
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E2E8F0",
-          minHeight: 82,
-          paddingTop: 7,
-          paddingBottom: 8,
-        },
-        tabBarItemStyle: { paddingTop: 3, paddingBottom: 5 },
-        tabBarIconStyle: { marginTop: 1, marginBottom: 2 },
-        tabBarLabelStyle: {
-          width: 50,
-          fontSize: 12,
-          lineHeight: 18,
-          fontWeight: "600",
-          paddingBottom: 0,
-          marginTop: 2,
-        },
-        tabBarLabelPosition: "below-icon",
-        tabBarAllowFontScaling: false,
-        tabBarActiveTintColor: "#0F172A",
-        tabBarInactiveTintColor: "#9CA3AF",
-        tabBarHideOnKeyboard: true,
-      }}
+      screenOptions={sharedTabScreenOptions}
     >
       <Tabs.Screen
         name="hall"
