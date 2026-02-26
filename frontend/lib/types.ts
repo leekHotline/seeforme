@@ -115,6 +115,24 @@ export interface ReplyListResponse {
   items: Reply[];
 }
 
+export type NotificationType = "reply" | "system";
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  sender: string;
+  title: string;
+  preview: string;
+  tag: string;
+  request_id: string | null;
+  reply_id: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: NotificationItem[];
+}
+
 // ── Feedback ──────────────────────────────────────
 export interface FeedbackCreate {
   resolved: boolean;
@@ -150,3 +168,4 @@ export interface UploadContentResponse {
   mime_type: string;
   size: number;
 }
+
