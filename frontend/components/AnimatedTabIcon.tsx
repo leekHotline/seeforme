@@ -79,7 +79,7 @@ export default function AnimatedTabIcon({
       >
         {focused ? (
           <View style={styles.iconContainer}>
-            {/* Gradient mask via SVG behind the icon */}
+            {/* Gradient background rectangle behind the white icon */}
             <Svg width={28} height={28} style={StyleSheet.absoluteFillObject}>
               <Defs>
                 <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">

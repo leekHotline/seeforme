@@ -19,24 +19,28 @@ export default function GlassCard({
 
   return (
     <View
-      className={`overflow-hidden rounded-3xl border ${
-        isLight
-          ? "border-white/30"
-          : "border-white/12"
-      } ${className}`}
+      className={`rounded-3xl ${className}`}
       style={isLight ? styles.lightCard : styles.darkCard}
     >
-      <BlurView
-        intensity={isLight ? 60 : 28}
-        tint={isLight ? "light" : "dark"}
-        style={StyleSheet.absoluteFillObject}
-      />
       <View
-        className={`${
-          isLight ? "bg-white/82" : "bg-slate-900/40"
-        } ${contentClassName}`}
+        className={`overflow-hidden rounded-3xl border ${
+          isLight
+            ? "border-slate-200/80"
+            : "border-white/12"
+        }`}
       >
-        {children}
+        <BlurView
+          intensity={isLight ? 60 : 28}
+          tint={isLight ? "light" : "dark"}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View
+          className={`${
+            isLight ? "bg-white/82" : "bg-slate-900/40"
+          } ${contentClassName}`}
+        >
+          {children}
+        </View>
       </View>
     </View>
   );

@@ -377,7 +377,7 @@ export default function AttachmentAudioPlayer({
                     key={`${endpoint}-${index}`}
                     className="items-center justify-end"
                     style={{
-                      width: waveBarWidth,
+                      width,
                       marginRight: index === waveLevels.length - 1 ? 0 : waveGap,
                     }}
                   >

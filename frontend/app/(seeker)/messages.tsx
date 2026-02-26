@@ -294,18 +294,16 @@ export default function SeekerMessagesScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadMessages();
-    }, [loadMessages])
+
+      if (isGuest || !isAuthenticated) return;
+
+      const timer = setInterval(() => {
+        void loadMessages();
+      }, 8000);
+
+      return () => clearInterval(timer);
+    }, [isAuthenticated, isGuest, loadMessages])
   );
-
-  useEffect(() => {
-    if (isGuest || !isAuthenticated) return;
-
-    const timer = setInterval(() => {
-      void loadMessages();
-    }, 8000);
-
-    return () => clearInterval(timer);
-  }, [isAuthenticated, isGuest, loadMessages]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
