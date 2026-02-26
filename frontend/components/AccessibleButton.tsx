@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Accessible button component with haptics, announcements, and micro-interactions.
  */
 

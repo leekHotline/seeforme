@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { MotiView } from "moti";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";

@@ -302,6 +302,9 @@ export default function AttachmentAudioPlayer({
 
   const avatarInitial = speakerName.trim().slice(0, 1).toUpperCase() || "U";
   const rightTime = durationSec > 0 ? formatClock(durationSec) : "--:--";
+  const waveBarWidth = compact ? 3 : 4;
+  const waveGap = compact ? 3 : 4;
+  const waveTrackHeight = compact ? 22 : 26;
 
   return (
     <View
@@ -365,19 +368,30 @@ export default function AttachmentAudioPlayer({
               </Text>
             </View>
 
-            <View className="mt-2 flex-row items-end gap-1">
+            <View className="mt-2 flex-row items-end" style={{ height: waveTrackHeight }}>
               {waveLevels.map((value, index) => {
-                const height = 6 + value * (compact ? 16 : 20);
+                const height = 6 + value * (compact ? 14 : 18);
+                const width = waveBarWidth + value * (compact ? 1.4 : 1.8);
                 return (
-                  <MotiView
+                  <View
                     key={`${endpoint}-${index}`}
-                    className={`${compact ? "w-1" : "w-1.5"} rounded-full bg-cyan-500`}
-                    animate={{
-                      height,
-                      opacity: isPlaying ? 0.95 : 0.5,
+                    className="items-center justify-end"
+                    style={{
+                      width,
+                      marginRight: index === waveLevels.length - 1 ? 0 : waveGap,
                     }}
-                    transition={{ type: "timing", duration: 120 }}
-                  />
+                  >
+                    <View
+                      style={{
+                        width,
+                        height,
+                        borderRadius: 999,
+                        backgroundColor: "#06B6D4",
+                        opacity: isPlaying ? 0.95 : 0.62,
+                        transform: [{ scaleY: isPlaying ? 1 : 0.86 }],
+                      }}
+                    />
+                  </View>
                 );
               })}
             </View>
@@ -386,7 +400,11 @@ export default function AttachmentAudioPlayer({
 
         <View className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
           <MotiView
-            className="h-full rounded-full bg-cyan-500"
+            style={{
+              height: "100%",
+              borderRadius: 999,
+              backgroundColor: "#06B6D4",
+            }}
             animate={{ width: `${Math.max(8, playbackProgress * 100)}%` }}
             transition={{ type: "timing", duration: 160 }}
           />

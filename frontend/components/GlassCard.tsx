@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 
@@ -19,22 +19,46 @@ export default function GlassCard({
 
   return (
     <View
-      className={`overflow-hidden rounded-3xl border ${
-        isLight ? "border-slate-200/90" : "border-white/30"
-      } ${className}`}
+      className={`rounded-3xl ${className}`}
+      style={isLight ? styles.lightCard : styles.darkCard}
     >
-      <BlurView
-        intensity={isLight ? 24 : 22}
-        tint={isLight ? "light" : "dark"}
-        style={StyleSheet.absoluteFillObject}
-      />
       <View
-        className={`${
-          isLight ? "bg-white/88" : "bg-slate-900/45"
-        } ${contentClassName}`}
+        className={`overflow-hidden rounded-3xl border ${
+          isLight
+            ? "border-slate-200/80"
+            : "border-white/12"
+        }`}
       >
-        {children}
+        <BlurView
+          intensity={isLight ? 60 : 28}
+          tint={isLight ? "light" : "dark"}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View
+          className={`${
+            isLight ? "bg-white/82" : "bg-slate-900/40"
+          } ${contentClassName}`}
+        >
+          {children}
+        </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  lightCard: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  darkCard: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+});

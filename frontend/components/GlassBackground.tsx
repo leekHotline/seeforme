@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { MotiView } from "moti";
